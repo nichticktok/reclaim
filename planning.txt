@@ -1,0 +1,60 @@
+lib/
+├── main.dart
+├── screens/
+│   ├── splash_screen.dart
+│   ├── onboarding_screen.dart
+│   ├── login_screen.dart
+│   ├── home_screen.dart
+│   ├── add_habit_screen.dart
+│   ├── habit_detail_screen.dart
+│   ├── proof_screen.dart
+│   ├── ai_result_screen.dart
+│   ├── dashboard_screen.dart
+│   └── settings_screen.dart
+├── models/
+│   ├── habit_model.dart
+│   └── user_model.dart
+├── services/
+│   ├── notification_service.dart
+│   ├── ai_service.dart
+│   ├── auth_service.dart
+│   └── storage_service.dart
+└── widgets/
+    ├── habit_card.dart
+    ├── proof_input.dart
+    ├── stat_card.dart
+    └── custom_button.dart
+
+
+
+this is something to look into 
+
+
+lib/
+│
+├── main.dart
+│
+├── models/
+│   ├── habit_model.dart
+│   ├── user_model.dart
+│   └── progress_model.dart
+│
+├── screens/
+│   ├── onboarding/
+│   │   ├── onboarding_screen.dart
+│   │   └── questionnaire_screen.dart
+│   ├── program_overview_screen.dart
+│   ├── daily_tasks_screen.dart
+│   ├── task_detail_screen.dart
+│   ├── reflection_screen.dart
+│   ├── progress_screen.dart
+│   ├── profile_screen.dart
+│   ├── community_screen.dart
+│   └── subscription_screen.dart
+│
+└── widgets/
+    ├── habit_card.dart
+    ├── progress_ring.dart
+    ├── proof_input_box.dart
+    ├── reflection_card.dart
+    └── custom_button.dart
