@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'firebase_options.dart';
 import 'screens/onboarding/onboarding_screen.dart';
 import 'screens/home_screen.dart';
-import 'screens/task_detail_screen.dart'; // ✅ important import
+import 'screens/auth/sign_in_screen.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const ReclaimApp());
 }
 
@@ -15,20 +22,18 @@ class ReclaimApp extends StatelessWidget {
     return MaterialApp(
       title: 'Reclaim',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
-        useMaterial3: true,
-        fontFamily: 'Inter',
-        scaffoldBackgroundColor: Colors.white,
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasData) {
+            return const HomeScreen(); // user logged in
+          } else {
+            return const SignInScreen(); // user not logged in
+          }
+        },
       ),
-
-      // ✅ make sure this is correct:
-      home: const OnboardingScreen(),
-
-      routes: {
-        '/home': (context) => const HomeScreen(),
-        '/task_detail': (context) => const TaskDetailScreen(), // ✅ added here
-      },
     );
   }
 }

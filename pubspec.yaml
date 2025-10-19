@@ -12,10 +12,20 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
+
+  # 🔥 Firebase Core and Auth
   firebase_core: ^3.3.0
   cloud_firestore: ^5.4.2
   firebase_auth: ^5.3.1
+
+  # 👇 Add Google Sign-In package
+  google_sign_in: ^6.2.1
+
+  # 🧠 State management
   provider: ^6.1.2
+
+  # 🍎 (Optional) Apple Sign-In for iOS users
+  sign_in_with_apple: ^6.1.1
 
 dev_dependencies:
   flutter_test:

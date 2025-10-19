@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import '../models/user_model.dart';
 import 'progress_screen.dart';
 import 'community_screen.dart';
@@ -14,34 +17,90 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
-
-  // Temporary example user — replace later with real user data
-  final UserModel currentUser = UserModel(
-    id: '1',
-    name: 'John Doe',
-    email: 'john@example.com',
-    goal: 'Become more focused and consistent',
-    proofMode: true,
-    level: 1,
-    streak: 0,
-    isPremium: false,
-  );
-
-  late final List<Widget> _screens;
+  UserModel? currentUser;
+  bool _loading = true;
+  late List<Widget> _screens;
 
   @override
   void initState() {
     super.initState();
-    _screens = [
-      const DailyTasksScreen(),
-      const ProgressScreen(),
-      const CommunityScreen(),
-      ProfileScreen(user: currentUser),
-    ];
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (user == null) {
+        // You can redirect to login or onboarding if user is not logged in
+        debugPrint("⚠️ No Firebase user found");
+        return;
+      }
+
+      final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
+      final docSnapshot = await userDoc.get();
+
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data()!;
+        currentUser = UserModel(
+          id: user.uid,
+          name: data['name'] ?? user.displayName ?? 'User',
+          email: data['email'] ?? user.email ?? '',
+          goal: data['goal'] ?? '',
+          proofMode: data['proofMode'] ?? false,
+          level: data['level'] ?? 1,
+          streak: data['streak'] ?? 0,
+          isPremium: data['isPremium'] ?? false,
+        );
+      } else {
+        // Create a default Firestore user profile if not found
+        await userDoc.set({
+          'name': user.displayName ?? 'User',
+          'email': user.email ?? '',
+          'goal': '',
+          'proofMode': false,
+          'level': 1,
+          'streak': 0,
+          'isPremium': false,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        currentUser = UserModel(
+          id: user.uid,
+          name: user.displayName ?? 'User',
+          email: user.email ?? '',
+          goal: '',
+          proofMode: false,
+          level: 1,
+          streak: 0,
+          isPremium: false,
+        );
+      }
+
+      setState(() {
+        _screens = [
+          const DailyTasksScreen(),
+          const ProgressScreen(),
+          const CommunityScreen(),
+          ProfileScreen(user: currentUser!),
+        ];
+        _loading = false;
+      });
+    } catch (e) {
+      debugPrint("❌ Error loading user data: $e");
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     return Scaffold(
       extendBody: true,
       backgroundColor: Colors.grey.shade100,
