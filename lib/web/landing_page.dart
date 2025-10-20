@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -118,15 +117,13 @@ class LandingPage extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 32),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment:
-              isNarrow ? MainAxisAlignment.center : MainAxisAlignment.start,
+        Wrap(
+          alignment: isNarrow ? WrapAlignment.center : WrapAlignment.start,
+          spacing: 12,
+          runSpacing: 12,
           children: const [
             _FeatureChip(text: 'Daily habit challenges'),
-            SizedBox(width: 12),
             _FeatureChip(text: 'Proof-based accountability'),
-            SizedBox(width: 12),
             _FeatureChip(text: 'Smart reminders'),
           ],
         ),
@@ -186,7 +183,7 @@ class _FeatureChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: Colors.white24),
       ),

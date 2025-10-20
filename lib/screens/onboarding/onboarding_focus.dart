@@ -65,7 +65,7 @@ class _OnboardingFocusState extends State<OnboardingFocus> {
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: selected
-                              ? Colors.blueAccent.withOpacity(0.2)
+                              ? Colors.blueAccent.withValues(alpha: 0.2)
                               : Colors.white,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
@@ -76,7 +76,7 @@ class _OnboardingFocusState extends State<OnboardingFocus> {
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
+                              color: Colors.black.withValues(alpha: 0.05),
                               blurRadius: 4,
                               offset: const Offset(0, 2),
                             ),

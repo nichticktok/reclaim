@@ -48,7 +48,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             // Avatar
             CircleAvatar(
               radius: 50,
-              backgroundColor: Colors.blueAccent.withOpacity(0.1),
+              backgroundColor: Colors.blueAccent.withValues(alpha: 0.1),
               child: const Icon(Icons.person, size: 60, color: Colors.blueAccent),
             ),
 
@@ -141,7 +141,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 6,
             offset: const Offset(0, 3),
           ),
@@ -221,7 +221,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 6,
             offset: const Offset(0, 3),
           ),

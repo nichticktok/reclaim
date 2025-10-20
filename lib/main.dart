@@ -19,7 +19,7 @@ Future<void> main() async {
   runApp(
     ChangeNotifierProvider(
       create: (_) => LanguageProvider(), // ✅ provides global language context
-      builder: (context, _) => const ReclaimApp(),
+      child: const ReclaimApp(),
     ),
   );
 }

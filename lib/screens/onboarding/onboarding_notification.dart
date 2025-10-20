@@ -28,7 +28,7 @@ class OnboardingNotification extends StatelessWidget {
                 // Small emblem at top
                 Icon(
                   Icons.auto_awesome_rounded,
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                   size: 40,
                 ),
                 const SizedBox(height: 48),
@@ -47,11 +47,11 @@ class OnboardingNotification extends StatelessWidget {
                     ),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.1),
+                      color: Colors.white.withValues(alpha: 0.1),
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.orange.withOpacity(0.15),
+                        color: Colors.orange.withValues(alpha: 0.15),
                         blurRadius: 30,
                         spreadRadius: 4,
                         offset: const Offset(0, 10),
@@ -73,7 +73,7 @@ class OnboardingNotification extends StatelessWidget {
                         "The system has recognized your potential.",
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodyLarge?.copyWith(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                           height: 1.5,
                         ),
                       ),
@@ -82,7 +82,7 @@ class OnboardingNotification extends StatelessWidget {
                         textAlign: TextAlign.center,
                         text: TextSpan(
                           style: theme.textTheme.bodyLarge?.copyWith(
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha: 0.9),
                             height: 1.5,
                           ),
                           children: [
@@ -114,7 +114,7 @@ class OnboardingNotification extends StatelessWidget {
                             ),
                             elevation: 8,
                             shadowColor:
-                                const Color(0xFFFF7A00).withOpacity(0.4),
+                                const Color(0xFFFF7A00).withValues(alpha: 0.4),
                           ),
                           child: const Text(
                             "Accept",

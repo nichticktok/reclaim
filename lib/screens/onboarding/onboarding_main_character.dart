@@ -64,7 +64,7 @@ class _OnboardingMainCharacterState extends State<OnboardingMainCharacter> {
               Expanded(
                 child: ListView.separated(
                   itemCount: options.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 14),
+                  separatorBuilder: (_, index) => const SizedBox(height: 14),
                   itemBuilder: (context, index) {
                     final opt = options[index];
                     final isSelected = selectedId == opt.id;
@@ -84,12 +84,12 @@ class _OnboardingMainCharacterState extends State<OnboardingMainCharacter> {
                         ),
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? Colors.white.withOpacity(0.15)
-                              : Colors.white.withOpacity(0.07),
+                              ? Colors.white.withValues(alpha: 0.15)
+                              : Colors.white.withValues(alpha: 0.07),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: isSelected
-                                ? Colors.white.withOpacity(0.6)
+                                ? Colors.white.withValues(alpha: 0.6)
                                 : Colors.transparent,
                             width: 1.2,
                           ),

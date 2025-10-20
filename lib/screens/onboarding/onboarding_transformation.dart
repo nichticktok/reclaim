@@ -20,7 +20,7 @@ class OnboardingTransformation extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(Icons.auto_awesome_rounded,
-                  size: 42, color: Colors.orange.withOpacity(0.9)),
+                  size: 42, color: Colors.orange.withValues(alpha: 0.9)),
               const SizedBox(height: 60),
 
               Text(
@@ -66,7 +66,7 @@ class OnboardingTransformation extends StatelessWidget {
                     ),
                     elevation: 10,
                     shadowColor:
-                        const Color(0xFFFF7A00).withOpacity(0.5),
+                        const Color(0xFFFF7A00).withValues(alpha: 0.5),
                   ),
                   child: const Text(
                     "Begin My Journey",

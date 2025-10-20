@@ -25,7 +25,7 @@ class HabitCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
+              color: Colors.grey.withValues(alpha: 0.1),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -40,7 +40,7 @@ class HabitCard extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: habit.completed
-                    ? Colors.greenAccent.withOpacity(0.3)
+                    ? Colors.greenAccent.withValues(alpha: 0.3)
                     : Colors.grey.shade200,
               ),
               child: Icon(

@@ -111,7 +111,7 @@ class _OnboardingAwakeningState extends State<OnboardingAwakening>
                               Icon(
                                 Icons.auto_awesome_rounded,
                                 size: 42,
-                                color: Colors.orange.withOpacity(0.9),
+                                color: Colors.orange.withValues(alpha: 0.9),
                                 semanticLabel: 'Awakening',
                               ),
                               const SizedBox(height: 60),
@@ -167,7 +167,7 @@ class _OnboardingAwakeningState extends State<OnboardingAwakening>
                               borderRadius: BorderRadius.circular(14),
                             ),
                             elevation: 6,
-                            shadowColor: const Color(0xFFFF7A00).withOpacity(0.35),
+                            shadowColor: const Color(0xFFFF7A00).withValues(alpha: 0.35),
                           ),
                           icon: const Icon(Icons.play_arrow_rounded, size: 20),
                           label: Text(

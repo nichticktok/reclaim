@@ -42,7 +42,7 @@ class OnboardingSummary extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.blueAccent.withOpacity(0.05),
+                  color: Colors.blueAccent.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Column(
@@ -59,7 +59,7 @@ class OnboardingSummary extends StatelessWidget {
                           .map((area) => Chip(
                                 label: Text(area),
                                 backgroundColor:
-                                    Colors.blueAccent.withOpacity(0.15),
+                                    Colors.blueAccent.withValues(alpha: 0.15),
                                 labelStyle:
                                     const TextStyle(color: Colors.blueAccent),
                               ))
@@ -76,8 +76,8 @@ class OnboardingSummary extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: proofMode
-                      ? Colors.greenAccent.withOpacity(0.1)
-                      : Colors.orangeAccent.withOpacity(0.1),
+                      ? Colors.greenAccent.withValues(alpha: 0.1)
+                      : Colors.orangeAccent.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Row(

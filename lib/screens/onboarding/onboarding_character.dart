@@ -86,13 +86,13 @@ class _OnboardingCharacterState extends State<OnboardingCharacter> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFF7A00),
                     foregroundColor: Colors.white,
-                    disabledBackgroundColor: Colors.white.withOpacity(0.1),
+                    disabledBackgroundColor: Colors.white.withValues(alpha: 0.1),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
                     elevation: 8,
-                    shadowColor: const Color(0xFFFF7A00).withOpacity(0.4),
+                    shadowColor: const Color(0xFFFF7A00).withValues(alpha: 0.4),
                   ),
                   child: Text(
                     lang.t('continue'), // add this key (e.g. "Continue")
@@ -129,7 +129,7 @@ class _OnboardingCharacterState extends State<OnboardingCharacter> {
             decoration: BoxDecoration(
               color: selected
                   ? const Color(0x33FF7A00)
-                  : Colors.white.withOpacity(0.07),
+                  : Colors.white.withValues(alpha: 0.07),
               borderRadius: BorderRadius.circular(60),
               border: Border.all(
                 color: selected ? const Color(0xFFFF7A00) : Colors.transparent,

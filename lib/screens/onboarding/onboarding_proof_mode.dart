@@ -56,7 +56,7 @@ class _OnboardingProofModeState extends State<OnboardingProofMode> {
                 width: double.infinity,
                 decoration: BoxDecoration(
                   color: _proofMode
-                      ? Colors.blueAccent.withOpacity(0.15)
+                      ? Colors.blueAccent.withValues(alpha: 0.15)
                       : Colors.grey.shade200,
                   borderRadius: BorderRadius.circular(24),
                 ),
@@ -86,7 +86,8 @@ class _OnboardingProofModeState extends State<OnboardingProofMode> {
                   style: TextStyle(color: Colors.grey.shade600),
                 ),
                 value: _proofMode,
-                activeColor: Colors.blueAccent,
+                activeThumbColor: Colors.blueAccent,
+                activeTrackColor: Colors.blueAccent.withValues(alpha: 0.4),
                 onChanged: (value) {
                   setState(() => _proofMode = value);
                 },

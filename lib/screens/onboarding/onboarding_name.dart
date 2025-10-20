@@ -113,17 +113,17 @@ class _OnboardingNameState extends State<OnboardingName> {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide:
-                          BorderSide(color: Colors.white.withOpacity(0.12)),
+                          BorderSide(color: Colors.white.withValues(alpha: 0.12)),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide:
-                          BorderSide(color: Colors.white.withOpacity(0.12)),
+                          BorderSide(color: Colors.white.withValues(alpha: 0.12)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide:
-                          BorderSide(color: Colors.white.withOpacity(0.3)),
+                          BorderSide(color: Colors.white.withValues(alpha: 0.3)),
                     ),
                   ),
                   textInputAction: TextInputAction.done,

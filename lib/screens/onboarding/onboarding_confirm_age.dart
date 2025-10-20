@@ -118,9 +118,9 @@ class _OnboardingConfirmAgeState extends State<OnboardingConfirmAge> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
+                  color: Colors.white.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                 ),
                 child: Column(
                   children: [
@@ -207,7 +207,7 @@ class _OnboardingConfirmAgeState extends State<OnboardingConfirmAge> {
                       borderRadius: BorderRadius.circular(14),
                     ),
                     elevation: 8,
-                    shadowColor: const Color(0xFFFF7A00).withOpacity(0.4),
+                    shadowColor: const Color(0xFFFF7A00).withValues(alpha: 0.4),
                   ),
                   child: Text(
                     lang.t('confirm'), // ✅ localized

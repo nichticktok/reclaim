@@ -27,7 +27,6 @@ class _SignInScreenState extends State<SignInScreen> {
 
   // ---- Email sheet (send code -> verify)
   void _showEmailCodeSheet() {
-    final rootContext = context;
     final emailCtrl = TextEditingController();
     final codeCtrl = TextEditingController();
     bool codeSent = false;
@@ -35,7 +34,7 @@ class _SignInScreenState extends State<SignInScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.black.withOpacity(0.95),
+      backgroundColor: Colors.black.withValues(alpha: 0.95),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -116,7 +115,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       hintText: "you@example.com",
                       hintStyle: const TextStyle(color: Colors.white54),
                       filled: true,
-                      fillColor: Colors.white.withOpacity(0.1),
+                      fillColor: Colors.white.withValues(alpha: 0.1),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -136,7 +135,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         hintText: "6-digit code",
                         hintStyle: const TextStyle(color: Colors.white54),
                         filled: true,
-                        fillColor: Colors.white.withOpacity(0.1),
+                        fillColor: Colors.white.withValues(alpha: 0.1),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide.none,
@@ -150,7 +149,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     width: double.infinity,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white.withOpacity(0.15),
+                        backgroundColor: Colors.white.withValues(alpha: 0.15),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -305,10 +304,10 @@ class _SignInScreenState extends State<SignInScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: ElevatedButton.icon(
         style: ElevatedButton.styleFrom(
-          backgroundColor: dark ? Colors.black : Colors.white.withOpacity(0.1),
+          backgroundColor: dark ? Colors.black : Colors.white.withValues(alpha: 0.1),
           foregroundColor: Colors.white,
           minimumSize: const Size(double.infinity, 50),
-          side: BorderSide(color: Colors.white.withOpacity(0.3)),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         onPressed: onTap,

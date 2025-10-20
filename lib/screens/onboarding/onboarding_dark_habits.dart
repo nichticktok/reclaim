@@ -83,8 +83,8 @@ class _OnboardingDarkHabitsState extends State<OnboardingDarkHabits> {
                       ),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? Colors.white.withOpacity(0.15)
-                            : Colors.white.withOpacity(0.07),
+                            ? Colors.white.withValues(alpha: 0.15)
+                            : Colors.white.withValues(alpha: 0.07),
                         borderRadius: BorderRadius.circular(30),
                         border: Border.all(
                           color: isSelected ? Colors.orangeAccent : Colors.transparent,
@@ -116,13 +116,13 @@ class _OnboardingDarkHabitsState extends State<OnboardingDarkHabits> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFF7A00),
                     foregroundColor: Colors.white,
-                    disabledBackgroundColor: Colors.white.withOpacity(0.1),
+                    disabledBackgroundColor: Colors.white.withValues(alpha: 0.1),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
                     elevation: 8,
-                    shadowColor: const Color(0xFFFF7A00).withOpacity(0.4),
+                    shadowColor: const Color(0xFFFF7A00).withValues(alpha: 0.4),
                   ),
                   child: Text(
                     // localized common button text
