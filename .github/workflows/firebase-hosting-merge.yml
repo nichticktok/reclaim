@@ -40,7 +40,7 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
         run: |
           printf '%s' '${{ secrets.FIREBASE_SERVICE_ACCOUNT_RECLAIM }}' > "$GOOGLE_APPLICATION_CREDENTIALS"
-          firebase deploy --only functions --project reclaim-f1b3f --non-interactive
+          firebase deploy --only functions --project reclaim-f1b3f --non-interactive --force
           rm -f "$GOOGLE_APPLICATION_CREDENTIALS"
 
       - name: Deploy to Firebase Hosting
