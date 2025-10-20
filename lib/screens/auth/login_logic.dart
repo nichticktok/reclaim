@@ -18,10 +18,9 @@ const int _functionsEmulatorPort =
 
 class AuthController {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFunctions _functions =
-      FirebaseFunctions.instanceFor(region: _functionsRegion);
+  late final FirebaseFunctions _functions;
 
-  AuthController() {
+  AuthController() : _functions = FirebaseFunctions.instanceFor(region: _functionsRegion) {
     // If you run the functions emulator on your dev machine, enable emulator here.
     // For the iOS Simulator localhost is fine; for Android emulator use 10.0.2.2
     if (kDebugMode && _useFunctionsEmulator) {
