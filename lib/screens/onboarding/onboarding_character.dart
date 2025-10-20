@@ -25,7 +25,7 @@ class _OnboardingCharacterState extends State<OnboardingCharacter> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final lang = Provider.of<LanguageProvider>(context);
-    final isSelected = (String c) => selectedCharacter == c;
+    bool isSelected(String c) => selectedCharacter == c;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0A),

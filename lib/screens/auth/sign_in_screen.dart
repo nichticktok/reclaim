@@ -1,6 +1,6 @@
 // lib/ui/sign_in_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'dart:io' show Platform;
@@ -16,50 +16,161 @@ class SignInScreen extends StatefulWidget {
 
 class _SignInScreenState extends State<SignInScreen> {
   bool loading = false;
-
-  // Email-link controller
   final _authController = AuthController();
 
-  // ---- Navigation helper
   void _safeGoToOnboarding() {
     if (!mounted) return;
     Navigator.pushReplacementNamed(context, '/onboarding_screen');
   }
 
-  // ---- ActionCodeSettings for email links (replace values!)
-  ActionCodeSettings get _acs => ActionCodeSettings(
-        url: 'https://reclaim-f1b3f.web.app/emailSignIn', // your Dynamic Link
-        handleCodeInApp: true,
-        androidPackageName: 'com.example.recalim',        // <-- replace
-        androidInstallApp: true,
-        androidMinimumVersion: '21',
-        iOSBundleId: 'com.example.recalim',               // <-- replace
-      );
+  bool get _isCupertino => !kIsWeb && (Platform.isIOS || Platform.isMacOS);
 
-  @override
-  void initState() {
-    super.initState();
-    // Listen & complete email link sign-in if app is opened by the link
-    _authController.initEmailLinkListener(
-      onSuccess: _safeGoToOnboarding,
-      onInfo: (msg) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-      },
-      onError: (msg) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  // ---- Email sheet (send code -> verify)
+  void _showEmailCodeSheet() {
+    final rootContext = context;
+    final emailCtrl = TextEditingController();
+    final codeCtrl = TextEditingController();
+    bool codeSent = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.black.withOpacity(0.95),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        // log to console instead of showing SnackBars
+        void log(String m) => debugPrint('[email-sheet] $m');
+
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+            left: 20,
+            right: 20,
+            top: 16,
+          ),
+          child: StatefulBuilder(
+            builder: (context, setLocal) {
+              Future<void> sendCode() async {
+                final email = emailCtrl.text.trim();
+                if (email.isEmpty || !email.contains('@')) {
+                  log('Please enter a valid email');
+                  return;
+                }
+                if (mounted) setState(() => loading = true);
+                try {
+                  await _authController.requestCode(email: email);
+                  setLocal(() => codeSent = true);
+                  log('We emailed a 6-digit code to $email');
+                } catch (e, st) {
+                  log('Failed to send code: $e\n$st');
+                } finally {
+                  if (mounted) setState(() => loading = false);
+                }
+              }
+
+              Future<void> verify() async {
+                final email = emailCtrl.text.trim();
+                final code = codeCtrl.text.trim();
+                if (code.length != 6) {
+                  log('Enter the 6-digit code');
+                  return;
+                }
+                Navigator.pop(sheetContext); // close sheet
+                if (mounted) setState(() => loading = true);
+                try {
+                  await _authController.verifyCode(email: email, code: code);
+                  _safeGoToOnboarding();
+                } catch (e, st) {
+                  log('Verification failed: $e\n$st');
+                } finally {
+                  if (mounted) setState(() => loading = false);
+                }
+              }
+
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.pop(sheetContext),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        codeSent ? 'Enter the code we sent' : 'Sign in with Email',
+                        style: const TextStyle(
+                          color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: emailCtrl,
+                    keyboardType: TextInputType.emailAddress,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: "you@example.com",
+                      hintStyle: const TextStyle(color: Colors.white54),
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.1),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  if (codeSent) ...[
+                    TextField(
+                      controller: codeCtrl,
+                      keyboardType: TextInputType.number,
+                      maxLength: 6,
+                      style: const TextStyle(color: Colors.white, letterSpacing: 4),
+                      decoration: InputDecoration(
+                        counterText: '',
+                        hintText: "6-digit code",
+                        hintStyle: const TextStyle(color: Colors.white54),
+                        filled: true,
+                        fillColor: Colors.white.withOpacity(0.1),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white.withOpacity(0.15),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: codeSent ? verify : sendCode,
+                      child: Text(codeSent ? "Verify code" : "Send code"),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              );
+            },
+          ),
+        );
       },
     );
   }
 
-  @override
-  void dispose() {
-    _authController.dispose();
-    super.dispose();
-  }
-
-  // ---- Google (via Firebase provider API)
+  // Google (provider API)
   Future<void> signInWithGoogle() async {
     setState(() => loading = true);
     try {
@@ -80,23 +191,23 @@ class _SignInScreenState extends State<SignInScreen> {
     }
   }
 
-  // ---- Apple
+  // Apple
   Future<void> signInWithApple() async {
-    if (!Platform.isIOS && !Platform.isMacOS) return;
+    if (!_isCupertino) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Apple Sign-In not available on this platform')),
+      );
+      return;
+    }
     setState(() => loading = true);
     try {
       final appleCredential = await SignInWithApple.getAppleIDCredential(
-        scopes: [
-          AppleIDAuthorizationScopes.email,
-          AppleIDAuthorizationScopes.fullName,
-        ],
+        scopes: [AppleIDAuthorizationScopes.email, AppleIDAuthorizationScopes.fullName],
       );
-
       final oauthCredential = OAuthProvider("apple.com").credential(
         idToken: appleCredential.identityToken,
         accessToken: appleCredential.authorizationCode,
       );
-
       await FirebaseAuth.instance.signInWithCredential(oauthCredential);
       _safeGoToOnboarding();
     } catch (e) {
@@ -107,130 +218,6 @@ class _SignInScreenState extends State<SignInScreen> {
     } finally {
       if (mounted) setState(() => loading = false);
     }
-  }
-
-  // ---- Email bottom sheet: sends magic link
-  void _showEmailSignInSheet() {
-    // Capture the screen's context to use after the sheet is closed
-    final rootContext = context;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.black.withOpacity(0.95),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-      ),
-      builder: (sheetContext) {
-        final emailController = TextEditingController();
-
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
-            left: 24,
-            right: 24,
-            top: 16,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: () => Navigator.pop(sheetContext),
-                  ),
-                  const SizedBox(width: 4),
-                  const Text(
-                    "Enter your email address.",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              const Padding(
-                padding: EdgeInsets.only(left: 8.0),
-                child: Text(
-                  "We'll email you a secure sign-in link.",
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              TextField(
-                controller: emailController,
-                keyboardType: TextInputType.emailAddress,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: "you@example.com",
-                  hintStyle: const TextStyle(color: Colors.white54),
-                  filled: true,
-                  fillColor: Colors.white.withOpacity(0.1),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white.withOpacity(0.15),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: () async {
-                    final email = emailController.text.trim();
-                    if (email.isEmpty || !email.contains('@')) {
-                      // Use SHEET context while it's still mounted
-                      ScaffoldMessenger.of(sheetContext).showSnackBar(
-                        const SnackBar(content: Text("Please enter a valid email")),
-                      );
-                      return;
-                    }
-
-                    // Close the sheet first; sheetContext becomes invalid after this.
-                    Navigator.pop(sheetContext);
-
-                    if (mounted) setState(() => loading = true);
-                    try {
-                      await _authController.sendEmailLink(
-                        email: email,
-                        actionCodeSettings: _acs,
-                      );
-                      if (!mounted) return;
-                      // Use the ROOT (screen) context after closing the sheet
-                      ScaffoldMessenger.of(rootContext).showSnackBar(
-                        SnackBar(content: Text("Sign-in link sent to $email")),
-                      );
-                    } catch (e) {
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(rootContext).showSnackBar(
-                        SnackBar(content: Text("Failed to send link: $e")),
-                      );
-                    } finally {
-                      if (mounted) setState(() => loading = false);
-                    }
-                  },
-                  child: const Text("Send sign-in link"),
-                ),
-              ),
-              const SizedBox(height: 24),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   @override
@@ -260,7 +247,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   ),
                   const SizedBox(height: 40),
 
-                  if (Platform.isIOS || Platform.isMacOS)
+                  if (_isCupertino)
                     _authButton(
                       icon: Icons.apple,
                       label: "Continue with Apple",
@@ -279,7 +266,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   _authButton(
                     icon: Icons.email_outlined,
                     label: "Continue with Email",
-                    onTap: _showEmailSignInSheet,
+                    onTap: _showEmailCodeSheet,
                   ),
 
                   const SizedBox(height: 20),
@@ -291,9 +278,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                   ),
                   TextButton(
-                    onPressed: () {
-                      // Optional: trigger resend link flow / restore with cached email
-                    },
+                    onPressed: () {},
                     child: const Text(
                       "Restore Progress",
                       style: TextStyle(

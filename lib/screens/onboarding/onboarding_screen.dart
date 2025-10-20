@@ -190,8 +190,8 @@ class InheritedOnboardingProgress extends InheritedWidget {
     required this.progress,
     required this.stepIndex,
     required this.totalSteps,
-    required Widget child,
-  }) : super(child: child);
+    required super.child,
+  });
 
   static InheritedOnboardingProgress? of(BuildContext context) {
     return context.dependOnInheritedWidgetOfExactType<

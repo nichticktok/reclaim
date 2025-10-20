@@ -27,6 +27,9 @@ dependencies:
   # 🧠 State management
   provider: ^6.1.2
 
+  
+  cloud_functions: ^5.0.4
+
   # 🌍 (Optional, for future localization or JSON-based translations)
   flutter_localizations:
     sdk: flutter
