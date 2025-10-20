@@ -29,8 +29,35 @@ const MAX_ATTEMPTS = 5;
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const mailerConfig = functions.config().mailer || {};
+function loadMailerConfig() {
+  try {
+    const cfg = functions.config();
+    if (!cfg || typeof cfg !== 'object') {
+      logger.warn('functions.config() returned unexpected value', cfg);
+      return {};
+    }
+    return cfg.mailer || {};
+  } catch (err) {
+    logger.error('Failed to read functions.config()', err);
+    return {};
+  }
+}
+
+const mailerConfig = loadMailerConfig();
 let mailTransport = null;
+
+logger.info('Bootstrapping auth functions', {
+  mailerKeys: Object.keys(mailerConfig),
+  mailerConfigured: Boolean(mailerConfig?.host && mailerConfig?.user && mailerConfig?.pass && mailerConfig?.from),
+});
+
+process.on('uncaughtException', (err) => {
+  logger.error('Uncaught exception in Functions runtime', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  logger.error('Unhandled promise rejection in Functions runtime', reason);
+});
 
 function isMailerConfigured() {
   return Boolean(
