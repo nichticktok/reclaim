@@ -58,3 +58,48 @@ lib/
     ├── proof_input_box.dart
     ├── reflection_card.dart
     └── custom_button.dart
+    
+
+
+
+
+
+    ere’s the full deployment playbook to run from your terminal (workspace root is recalim/):
+
+Prepare Flutter web build
+
+flutter pub get
+flutter config --enable-web
+flutter build web --release
+Install Functions dependencies
+
+(cd functions && npm install --omit=dev)
+Make sure mailer config is present
+
+firebase functions:config:set \
+  mailer.host="in-v3.mailjet.com" \
+  mailer.port="587" \
+  mailer.secure="false" \
+  mailer.from="Reclaim <nichtiktok970@gmail.com>" \
+  mailer.user="d36e4703322de07a6ffd28cad2229011" \
+  mailer.pass="638d68d459ed4e3e7d7505b0aa1b8206" \
+  --project reclaim-f1b3f
+Deploy everything
+
+firebase deploy --project reclaim-f1b3f
+That deploys both Cloud Functions and Firebase Hosting with the latest build and config.
+
+
+
+
+
+Auto context
+
+
+Local
+
+Agent
+
+gpt-5-codex
+medium
+
