@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Recalim</string>
+	<string>Reclaim</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -41,6 +41,27 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+
+	<!-- ✅ Add this Google Sign-In configuration block -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<!-- Replace this with your actual reversed client ID -->
+				<string>com.googleusercontent.apps.YOUR_REVERSED_CLIENT_ID_HERE</string>
+			</array>
+		</dict>
+	</array>
+
+	<!-- ✅ Optional but recommended for Apple Sign-In -->
+	<key>NSAppleMusicUsageDescription</key>
+	<string>We use Apple ID for sign-in convenience.</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>Your information is used only for authentication purposes.</string>
+
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
