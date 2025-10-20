@@ -35,6 +35,29 @@ jobs:
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
+      - name: Configure Functions mailer secrets
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_RECLAIM }}
+          MAILER_HOST: ${{ secrets.MAILER_HOST }}
+          MAILER_PORT: ${{ secrets.MAILER_PORT }}
+          MAILER_SECURE: ${{ secrets.MAILER_SECURE }}
+          MAILER_FROM: ${{ secrets.MAILER_FROM }}
+          MAILER_USER: ${{ secrets.MAILER_USER }}
+          MAILER_PASS: ${{ secrets.MAILER_PASS }}
+        run: |
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$GOOGLE_APPLICATION_CREDENTIALS"
+          firebase functions:config:set \
+            mailer.host="$MAILER_HOST" \
+            mailer.port="${MAILER_PORT:-587}" \
+            mailer.secure="${MAILER_SECURE:-false}" \
+            mailer.from="$MAILER_FROM" \
+            mailer.user="$MAILER_USER" \
+            mailer.pass="$MAILER_PASS" \
+            --non-interactive \
+            --project reclaim-f1b3f
+          rm -f "$GOOGLE_APPLICATION_CREDENTIALS"
+
       - name: Deploy Cloud Functions
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
