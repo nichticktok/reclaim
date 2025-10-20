@@ -8,6 +8,8 @@ const logger = require('firebase-functions/logger');
 const admin = require('firebase-admin');
 const {FieldValue} = require('firebase-admin/firestore');
 const crypto = require('node:crypto');
+const functions = require('firebase-functions');
+const nodemailer = require('nodemailer');
 
 admin.initializeApp();
 
@@ -26,6 +28,73 @@ const CODE_TTL_SECONDS = 10 * 60; // 10 minutes
 const MAX_ATTEMPTS = 5;
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const mailerConfig = functions.config().mailer || {};
+let mailTransport = null;
+
+function isMailerConfigured() {
+  return Boolean(
+    mailerConfig.host &&
+      mailerConfig.user &&
+      mailerConfig.pass &&
+      mailerConfig.from,
+  );
+}
+
+function getMailTransport() {
+  if (!isMailerConfigured()) {
+    return null;
+  }
+  if (!mailTransport) {
+    const port = Number(mailerConfig.port ?? 587);
+    const secure =
+      typeof mailerConfig.secure === 'string'
+        ? mailerConfig.secure === 'true'
+        : port === 465;
+    mailTransport = nodemailer.createTransport({
+      host: mailerConfig.host,
+      port,
+      secure,
+      auth: {
+        user: mailerConfig.user,
+        pass: mailerConfig.pass,
+      },
+    });
+  }
+  return mailTransport;
+}
+
+async function sendLoginEmail(email, code) {
+  const transport = getMailTransport();
+  if (!transport) {
+    logger.warn(
+      'Email transport not configured. Login code logged for testing only.',
+      {email, code},
+    );
+    return;
+  }
+  const subject = 'Your Reclaim login code';
+  const textBody = `Here is your Reclaim login code: ${code}\n\nThis code expires in 10 minutes.`;
+  const htmlBody = `<p>Here is your <strong>Reclaim</strong> login code:</p>
+<p style="font-size: 24px; letter-spacing: 4px;"><strong>${code}</strong></p>
+<p>This code expires in 10 minutes. If you didn't request it, you can ignore this email.</p>`;
+  try {
+    await transport.sendMail({
+      to: email,
+      from: mailerConfig.from,
+      subject,
+      text: textBody,
+      html: htmlBody,
+    });
+    logger.info('Login code emailed', {email});
+  } catch (err) {
+    logger.error('Failed to send login code email', {email, err});
+    throw new HttpsError(
+      'internal',
+      'Failed to send login email. Please try again later.',
+    );
+  }
+}
 
 function normalizeEmail(email) {
   if (typeof email !== 'string') {
@@ -86,8 +155,7 @@ exports.auth_requestCode = onCall(async (request) => {
     lastAttemptAt: null,
   });
 
-  // TODO: wire up a real email service. For now we log the code for testing.
-  logger.info('Auth code generated', {email, code});
+  await sendLoginEmail(email, code);
 
   return {success: true};
 });
