@@ -2,13 +2,12 @@
  * Firebase Cloud Functions that back the email one-time-code login flow.
  */
 
-const {setGlobalOptions} = require('firebase-functions/v2');
-const {onCall, HttpsError} = require('firebase-functions/v2/https');
+const { setGlobalOptions } = require('firebase-functions/v2');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const logger = require('firebase-functions/logger');
 const admin = require('firebase-admin');
-const {FieldValue} = require('firebase-admin/firestore');
+const { FieldValue } = require('firebase-admin/firestore');
 const crypto = require('node:crypto');
-const functions = require('firebase-functions');
 const nodemailer = require('nodemailer');
 
 admin.initializeApp();
@@ -29,104 +28,74 @@ const MAX_ATTEMPTS = 5;
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function loadMailerConfig() {
-  try {
-    const cfg = functions.config();
-    if (!cfg || typeof cfg !== 'object') {
-      logger.warn('functions.config() returned unexpected value', cfg);
-      return {};
-    }
-    return cfg.mailer || {};
-  } catch (err) {
-    logger.error('Failed to read functions.config()', err);
-    return {};
-  }
+// ---------------- MAILER (ENV-ONLY; GEN-2 SAFE) ----------------
+let mailTransport = null; // cached per warm instance
+
+function getMailerConfig() {
+  const host = process.env.MAILER_HOST;
+  const port = Number(process.env.MAILER_PORT || 587);
+  const secure = String(process.env.MAILER_SECURE || 'false') === 'true' || port === 465;
+  const user = process.env.MAILER_USER;
+  const pass = process.env.MAILER_PASS;
+  const from = process.env.MAILER_FROM;
+  return { host, port, secure, user, pass, from };
 }
 
-const mailerConfig = loadMailerConfig();
-let mailTransport = null;
-
-logger.info('Bootstrapping auth functions', {
-  mailerKeys: Object.keys(mailerConfig),
-  mailerConfigured: Boolean(mailerConfig?.host && mailerConfig?.user && mailerConfig?.pass && mailerConfig?.from),
-});
-
-process.on('uncaughtException', (err) => {
-  logger.error('Uncaught exception in Functions runtime', err);
-});
-
-process.on('unhandledRejection', (reason) => {
-  logger.error('Unhandled promise rejection in Functions runtime', reason);
-});
-
-function isMailerConfigured() {
-  return Boolean(
-    mailerConfig.host &&
-      mailerConfig.user &&
-      mailerConfig.pass &&
-      mailerConfig.from,
-  );
+function isMailerConfigured(cfg) {
+  return Boolean(cfg.host && cfg.user && cfg.pass && cfg.from);
 }
 
-function getMailTransport() {
-  if (!isMailerConfigured()) {
-    return null;
-  }
+function getMailTransport(cfg) {
+  if (!isMailerConfigured(cfg)) return null;
   if (!mailTransport) {
-    const port = Number(mailerConfig.port ?? 587);
-    const secure =
-      typeof mailerConfig.secure === 'string'
-        ? mailerConfig.secure === 'true'
-        : port === 465;
     mailTransport = nodemailer.createTransport({
-      host: mailerConfig.host,
-      port,
-      secure,
-      auth: {
-        user: mailerConfig.user,
-        pass: mailerConfig.pass,
-      },
+      host: cfg.host,
+      port: cfg.port,
+      secure: cfg.secure, // false for 587 (STARTTLS), true for 465
+      auth: { user: cfg.user, pass: cfg.pass },
+      // logger: true, debug: true, // uncomment for SMTP wire logs
+    });
+    mailTransport.verify((err, ok) => {
+      if (err) logger.error('SMTP verify failed', { err });
+      else logger.info('SMTP verify ok', { ok });
     });
   }
   return mailTransport;
 }
 
 async function sendLoginEmail(email, code) {
-  const transport = getMailTransport();
+  const cfg = getMailerConfig();
+
+  // Log a safe summary each request
+  logger.info('Mailer config summary', {
+    host: !!cfg.host, port: cfg.port, secure: cfg.secure,
+    from: !!cfg.from, userSet: !!cfg.user, passSet: !!cfg.pass,
+  });
+
+  const transport = getMailTransport(cfg);
   if (!transport) {
-    logger.warn(
-      'Email transport not configured. Login code logged for testing only.',
-      {email, code},
-    );
-    return;
+    throw new HttpsError('failed-precondition', 'email_transport_unconfigured');
   }
+
   const subject = 'Your Reclaim login code';
   const textBody = `Here is your Reclaim login code: ${code}\n\nThis code expires in 10 minutes.`;
   const htmlBody = `<p>Here is your <strong>Reclaim</strong> login code:</p>
-<p style="font-size: 24px; letter-spacing: 4px;"><strong>${code}</strong></p>
+<p style="font-size:24px;letter-spacing:4px;"><strong>${code}</strong></p>
 <p>This code expires in 10 minutes. If you didn't request it, you can ignore this email.</p>`;
+
   try {
-    await transport.sendMail({
-      to: email,
-      from: mailerConfig.from,
-      subject,
-      text: textBody,
-      html: htmlBody,
-    });
-    logger.info('Login code emailed', {email});
+    await transport.sendMail({ to: email, from: cfg.from, subject, text: textBody, html: htmlBody });
+    logger.info('Login code emailed', { email });
   } catch (err) {
-    logger.error('Failed to send login code email', {email, err});
-    throw new HttpsError(
-      'internal',
-      'Failed to send login email. Please try again later.',
-    );
+    logger.error('Failed to send login code email', { email, err });
+    throw new HttpsError('internal', 'Failed to send login email. Please try again later.');
   }
 }
+// -------------- END MAILER ---------------------------------------------------
 
+// -- Utility ------------------------------------------------------------------
 function normalizeEmail(email) {
-  if (typeof email !== 'string') {
-    return '';
-  }
+  if (typeof email !== 'string') return '';
   return email.trim().toLowerCase();
 }
 
@@ -151,15 +120,13 @@ async function ensureUser(email) {
     return await auth.getUserByEmail(email);
   } catch (err) {
     if (err.code === 'auth/user-not-found') {
-      return auth.createUser({
-        email,
-        emailVerified: true,
-      });
+      return auth.createUser({ email, emailVerified: true });
     }
     throw err;
   }
 }
 
+// -- Callables ----------------------------------------------------------------
 exports.auth_requestCode = onCall(async (request) => {
   const email = normalizeEmail(request.data?.email);
   if (!emailRegex.test(email)) {
@@ -183,8 +150,7 @@ exports.auth_requestCode = onCall(async (request) => {
   });
 
   await sendLoginEmail(email, code);
-
-  return {success: true};
+  return { success: true };
 });
 
 exports.auth_verifyCode = onCall(async (request) => {
@@ -197,9 +163,7 @@ exports.auth_verifyCode = onCall(async (request) => {
 
   const docRef = db.collection(CODE_COLLECTION).doc(docIdForEmail(email));
   const snap = await docRef.get();
-  if (!snap.exists) {
-    throw new HttpsError('not-found', 'No code found. Request a new one.');
-  }
+  if (!snap.exists) throw new HttpsError('not-found', 'No code found. Request a new one.');
 
   const data = snap.data();
   const now = Date.now();
@@ -216,10 +180,7 @@ exports.auth_verifyCode = onCall(async (request) => {
 
   const expectedHash = hashCode(code, data.salt);
   if (expectedHash !== data.codeHash) {
-    await docRef.update({
-      attemptCount: FieldValue.increment(1),
-      lastAttemptAt: now,
-    }).catch(() => {});
+    await docRef.update({ attemptCount: FieldValue.increment(1), lastAttemptAt: now }).catch(() => {});
     throw new HttpsError('permission-denied', 'Invalid code.');
   }
 
@@ -228,7 +189,6 @@ exports.auth_verifyCode = onCall(async (request) => {
   const userRecord = await ensureUser(email);
   const customToken = await auth.createCustomToken(userRecord.uid);
 
-  logger.info('Auth code verified', {email, uid: userRecord.uid});
-
-  return {customToken};
+  logger.info('Auth code verified', { email, uid: userRecord.uid });
+  return { customToken };
 });
