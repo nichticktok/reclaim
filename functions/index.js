@@ -1,5 +1,6 @@
 /**
  * Firebase Cloud Functions that back the email one-time-code login flow.
+ * Last updated to ensure mailer config loads from env vars.
  */
 
 const { setGlobalOptions } = require('firebase-functions/v2');
