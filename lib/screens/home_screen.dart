@@ -7,6 +7,7 @@ import 'progress_screen.dart';
 import 'community_screen.dart';
 import 'profile_screen.dart';
 import 'daily_tasks_screen.dart';
+import 'auth/sign_in_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,70 +25,103 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+    _bootstrap();
   }
 
-  Future<void> _loadUserData() async {
+  Future<void> _bootstrap() async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
+      // 1) Wait for a real, non-null user (restores fast if already signed in)
+      final user = await FirebaseAuth.instance
+          .authStateChanges()
+          .firstWhere((u) => u != null)
+          .timeout(const Duration(seconds: 10), onTimeout: () => null);
+
+      if (!mounted) return;
 
       if (user == null) {
-        // You can redirect to login or onboarding if user is not logged in
-        debugPrint("⚠️ No Firebase user found");
+        // No session → go to Sign-in
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const SignInScreen()),
+          );
+        }
         return;
       }
 
-      final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
-      final docSnapshot = await userDoc.get();
-
-      if (docSnapshot.exists) {
-        final data = docSnapshot.data()!;
-        currentUser = UserModel(
-          id: user.uid,
-          name: data['name'] ?? user.displayName ?? 'User',
-          email: data['email'] ?? user.email ?? '',
-          goal: data['goal'] ?? '',
-          proofMode: data['proofMode'] ?? false,
-          level: data['level'] ?? 1,
-          streak: data['streak'] ?? 0,
-          isPremium: data['isPremium'] ?? false,
-        );
-      } else {
-        // Create a default Firestore user profile if not found
-        await userDoc.set({
-          'name': user.displayName ?? 'User',
-          'email': user.email ?? '',
+      // 2) Ensure /users/<uid> exists so Firestore rules allow reads
+      final userRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+      final snap = await userRef.get();
+      if (!snap.exists) {
+        await userRef.set({
+          'uid': user.uid,
+          'email': user.email,
+          'displayName': user.displayName,
+          'photoURL': user.photoURL,
           'goal': '',
           'proofMode': false,
           'level': 1,
           'streak': 0,
           'isPremium': false,
           'createdAt': FieldValue.serverTimestamp(),
-        });
-
-        currentUser = UserModel(
-          id: user.uid,
-          name: user.displayName ?? 'User',
-          email: user.email ?? '',
-          goal: '',
-          proofMode: false,
-          level: 1,
-          streak: 0,
-          isPremium: false,
-        );
+          'lastSeen': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      } else {
+        // keep lastSeen fresh
+        await userRef.set({'lastSeen': FieldValue.serverTimestamp()}, SetOptions(merge: true));
       }
 
-      setState(() {
-        _screens = [
-          const DailyTasksScreen(),
-          const ProgressScreen(),
-          const CommunityScreen(),
-          ProfileScreen(user: currentUser!),
-        ];
-        _loading = false;
-      });
+      // 3) Read user data (now rules should permit)
+      final doc = await userRef.get();
+      final data = doc.data() ?? {};
+
+      currentUser = UserModel(
+        id: user.uid,
+        name: (data['name'] ?? user.displayName ?? 'User') as String,
+        email: (data['email'] ?? user.email ?? '') as String,
+        goal: (data['goal'] ?? '') as String,
+        proofMode: (data['proofMode'] ?? false) as bool,
+        level: (data['level'] ?? 1) as int,
+        streak: (data['streak'] ?? 0) as int,
+        isPremium: (data['isPremium'] ?? false) as bool,
+      );
+
+      _screens = [
+        const DailyTasksScreen(),
+        const ProgressScreen(),
+        const CommunityScreen(),
+        ProfileScreen(user: currentUser!),
+      ];
+
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    } on FirebaseException catch (e) {
+      // Surface permission errors clearly, but don’t crash UI
+      debugPrint('❌ Firestore error: ${e.code} – ${e.message}');
+      if (e.code == 'permission-denied') {
+        // Optionally show a friendly screen or route to sign-in
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Permission denied. Please sign in again.')),
+          );
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const SignInScreen()),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: ${e.message ?? e.code}')),
+          );
+        }
+      }
     } catch (e) {
-      debugPrint("❌ Error loading user data: $e");
+      debugPrint('❌ Error loading user data: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Something went wrong.')),
+        );
+      }
     }
   }
 
@@ -95,9 +129,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 

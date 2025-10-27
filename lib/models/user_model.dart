@@ -9,6 +9,11 @@ class UserModel {
   int streak;
   bool isPremium;
 
+  // 👇 New fields for onboarding tracking
+  int onboardingStep;
+  bool onboardingCompleted;
+  Map<String, dynamic> onboardingData;
+
   UserModel({
     required this.id,
     required this.name,
@@ -19,6 +24,9 @@ class UserModel {
     this.level = 1,
     this.streak = 0,
     this.isPremium = false,
+    this.onboardingStep = 0,
+    this.onboardingCompleted = false,
+    this.onboardingData = const {},
   });
 
   Map<String, dynamic> toMap() {
@@ -32,6 +40,9 @@ class UserModel {
       'level': level,
       'streak': streak,
       'isPremium': isPremium,
+      'onboardingStep': onboardingStep,
+      'onboardingCompleted': onboardingCompleted,
+      'onboardingData': onboardingData,
     };
   }
 
@@ -46,6 +57,9 @@ class UserModel {
       level: map['level'] ?? 1,
       streak: map['streak'] ?? 0,
       isPremium: map['isPremium'] ?? false,
+      onboardingStep: map['onboardingStep'] ?? 0,
+      onboardingCompleted: map['onboardingCompleted'] ?? false,
+      onboardingData: Map<String, dynamic>.from(map['onboardingData'] ?? {}),
     );
   }
 }

@@ -1,4 +1,3 @@
-// lib/ui/sign_in_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:firebase_auth/firebase_auth.dart';
@@ -39,7 +38,6 @@ class _SignInScreenState extends State<SignInScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (sheetContext) {
-        // log to console instead of showing SnackBars
         void log(String m) => debugPrint('[email-sheet] $m');
 
         return Padding(
@@ -76,7 +74,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   log('Enter the 6-digit code');
                   return;
                 }
-                Navigator.pop(sheetContext); // close sheet
+                Navigator.pop(sheetContext);
                 if (mounted) setState(() => loading = true);
                 try {
                   await _authController.verifyCode(email: email, code: code);
@@ -102,7 +100,10 @@ class _SignInScreenState extends State<SignInScreen> {
                       Text(
                         codeSent ? 'Enter the code we sent' : 'Sign in with Email',
                         style: const TextStyle(
-                          color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -123,7 +124,6 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-
                   if (codeSent) ...[
                     TextField(
                       controller: codeCtrl,
@@ -144,7 +144,6 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                     const SizedBox(height: 12),
                   ],
-
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -169,7 +168,7 @@ class _SignInScreenState extends State<SignInScreen> {
     );
   }
 
-  // Google (provider API)
+  // ---- Google Sign-in
   Future<void> signInWithGoogle() async {
     setState(() => loading = true);
     try {
@@ -190,7 +189,7 @@ class _SignInScreenState extends State<SignInScreen> {
     }
   }
 
-  // Apple
+  // ---- Apple Sign-in
   Future<void> signInWithApple() async {
     if (!_isCupertino) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -214,6 +213,25 @@ class _SignInScreenState extends State<SignInScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Apple sign-in failed: $e')),
       );
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  // ---- Anonymous Guest Sign-in
+  Future<void> signInAsGuest() async {
+    if (loading) return;
+    setState(() => loading = true);
+    try {
+      final user = await _authController.continueAsGuest();
+      if (user != null) _safeGoToOnboarding();
+    } catch (e, st) {
+      debugPrint('[auth] Guest sign-in failed: $e\n$st');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to start as guest. Please try again.')),
+        );
+      }
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -269,8 +287,10 @@ class _SignInScreenState extends State<SignInScreen> {
                   ),
 
                   const SizedBox(height: 20),
+
+                  // ✅ Updated: Guest sign-up button uses AuthController
                   TextButton(
-                    onPressed: _safeGoToOnboarding,
+                    onPressed: signInAsGuest,
                     child: const Text(
                       "Sign up later",
                       style: TextStyle(color: Colors.white70, fontSize: 15),
@@ -283,7 +303,8 @@ class _SignInScreenState extends State<SignInScreen> {
                       style: TextStyle(
                         color: Colors.white,
                         decoration: TextDecoration.underline,
-                        fontSize: 15),
+                        fontSize: 15,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 40),

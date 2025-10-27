@@ -50,6 +50,7 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
+				<string>app-1-1074299395333-ios-7fd78ba3dfb2e73aedeb6c</string>
 				<!-- Replace this with your actual reversed client ID -->
 				<string>com.googleusercontent.apps.YOUR_REVERSED_CLIENT_ID_HERE</string>
 			</array>

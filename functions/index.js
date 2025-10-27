@@ -1,195 +1,207 @@
 /**
- * Firebase Cloud Functions that back the email one-time-code login flow.
- * Last updated to ensure mailer config loads from env vars.
+ * Firebase Cloud Functions — Reclaim Email One-Time-Code Login
+ * Updated: uses Mailjet via Firebase Secrets (no legacy functions.config()).
  */
 
-const { setGlobalOptions } = require('firebase-functions/v2');
-const { onCall, HttpsError } = require('firebase-functions/v2/https');
-const logger = require('firebase-functions/logger');
-const admin = require('firebase-admin');
-const { FieldValue } = require('firebase-admin/firestore');
-const crypto = require('node:crypto');
-const nodemailer = require('nodemailer');
+const { setGlobalOptions } = require("firebase-functions/v2");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const logger = require("firebase-functions/logger");
+const admin = require("firebase-admin");
+const { FieldValue } = require("firebase-admin/firestore");
+const crypto = require("node:crypto");
+const Mailjet = require("node-mailjet");
 
 admin.initializeApp();
 
 setGlobalOptions({
-  region: 'us-central1',
+  region: "us-central1",
   maxInstances: 10,
-  memory: '256MiB',
+  memory: "256MiB",
   timeoutSeconds: 30,
 });
 
 const db = admin.firestore();
 const auth = admin.auth();
 
-const CODE_COLLECTION = 'authMagicCodes';
+const CODE_COLLECTION = "authMagicCodes";
 const CODE_TTL_SECONDS = 10 * 60; // 10 minutes
 const MAX_ATTEMPTS = 5;
-
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// ---------------- MAILER (ENV-ONLY; GEN-2 SAFE) ----------------
-let mailTransport = null; // cached per warm instance
+// ---------------------- MAILJET CONFIG ----------------------
+let mailjetClient = null;
 
 function getMailerConfig() {
-  const host = process.env.MAILER_HOST;
-  const port = Number(process.env.MAILER_PORT || 587);
-  const secure = String(process.env.MAILER_SECURE || 'false') === 'true' || port === 465;
-  const user = process.env.MAILER_USER;
-  const pass = process.env.MAILER_PASS;
-  const from = process.env.MAILER_FROM;
-  return { host, port, secure, user, pass, from };
-}
+  const MJ_API_KEY = process.env.MJ_API_KEY;
+  const MJ_API_SECRET = process.env.MJ_API_SECRET;
+  const MJ_SENDER = process.env.MJ_SENDER;
 
-function isMailerConfigured(cfg) {
-  return Boolean(cfg.host && cfg.user && cfg.pass && cfg.from);
-}
-
-function getMailTransport(cfg) {
-  if (!isMailerConfigured(cfg)) return null;
-  if (!mailTransport) {
-    mailTransport = nodemailer.createTransport({
-      host: cfg.host,
-      port: cfg.port,
-      secure: cfg.secure, // false for 587 (STARTTLS), true for 465
-      auth: { user: cfg.user, pass: cfg.pass },
-      // logger: true, debug: true, // uncomment for SMTP wire logs
-    });
-    mailTransport.verify((err, ok) => {
-      if (err) logger.error('SMTP verify failed', { err });
-      else logger.info('SMTP verify ok', { ok });
-    });
+  if (!MJ_API_KEY || !MJ_API_SECRET || !MJ_SENDER) {
+    logger.error("❌ Missing Mailjet secrets in environment variables.");
+    return null;
   }
-  return mailTransport;
+
+  if (!mailjetClient) {
+    mailjetClient = Mailjet.apiConnect(MJ_API_KEY, MJ_API_SECRET);
+    logger.info("✅ Mailjet client initialized successfully.");
+  }
+
+  return { mailjetClient, from: MJ_SENDER };
 }
 
 async function sendLoginEmail(email, code) {
   const cfg = getMailerConfig();
+  if (!cfg)
+    throw new HttpsError("failed-precondition", "email_transport_unconfigured");
 
-  // Log a safe summary each request
-  logger.info('Mailer config summary', {
-    host: !!cfg.host, port: cfg.port, secure: cfg.secure,
-    from: !!cfg.from, userSet: !!cfg.user, passSet: !!cfg.pass,
-  });
-
-  const transport = getMailTransport(cfg);
-  if (!transport) {
-    throw new HttpsError('failed-precondition', 'email_transport_unconfigured');
-  }
-
-  const subject = 'Your Reclaim login code';
+  const subject = "Your Reclaim login code";
   const textBody = `Here is your Reclaim login code: ${code}\n\nThis code expires in 10 minutes.`;
-  const htmlBody = `<p>Here is your <strong>Reclaim</strong> login code:</p>
-<p style="font-size:24px;letter-spacing:4px;"><strong>${code}</strong></p>
-<p>This code expires in 10 minutes. If you didn't request it, you can ignore this email.</p>`;
+  const htmlBody = `
+    <p>Here is your <strong>Reclaim</strong> login code:</p>
+    <p style="font-size:24px;letter-spacing:4px;"><strong>${code}</strong></p>
+    <p>This code expires in 10 minutes.</p>
+  `;
 
   try {
-    await transport.sendMail({ to: email, from: cfg.from, subject, text: textBody, html: htmlBody });
-    logger.info('Login code emailed', { email });
+    await cfg.mailjetClient.post("send", { version: "v3.1" }).request({
+      Messages: [
+        {
+          From: { Email: cfg.from, Name: "Reclaim" },
+          To: [{ Email: email }],
+          Subject: subject,
+          TextPart: textBody,
+          HTMLPart: htmlBody,
+        },
+      ],
+    });
+    logger.info("📧 Login code emailed successfully", { email });
   } catch (err) {
-    logger.error('Failed to send login code email', { email, err });
-    throw new HttpsError('internal', 'Failed to send login email. Please try again later.');
+    logger.error("❌ Failed to send email", { err });
+    throw new HttpsError("internal", "Failed to send login email");
   }
 }
-// -------------- END MAILER ---------------------------------------------------
+// -------------------------------------------------------------
 
-// -- Utility ------------------------------------------------------------------
 function normalizeEmail(email) {
-  if (typeof email !== 'string') return '';
+  if (typeof email !== "string") return "";
   return email.trim().toLowerCase();
 }
 
 function docIdForEmail(email) {
-  return Buffer.from(email, 'utf8')
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
+  return Buffer.from(email, "utf8")
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
 }
 
 function generateCode() {
-  return crypto.randomInt(0, 1_000_000).toString().padStart(6, '0');
+  return crypto.randomInt(0, 1_000_000).toString().padStart(6, "0");
 }
 
 function hashCode(code, salt) {
-  return crypto.createHash('sha256').update(`${salt}:${code}`).digest('hex');
+  return crypto.createHash("sha256").update(`${salt}:${code}`).digest("hex");
 }
 
 async function ensureUser(email) {
   try {
     return await auth.getUserByEmail(email);
   } catch (err) {
-    if (err.code === 'auth/user-not-found') {
+    if (err.code === "auth/user-not-found") {
       return auth.createUser({ email, emailVerified: true });
     }
     throw err;
   }
 }
 
-// -- Callables ----------------------------------------------------------------
-exports.auth_requestCode = onCall(async (request) => {
-  const email = normalizeEmail(request.data?.email);
-  if (!emailRegex.test(email)) {
-    throw new HttpsError('invalid-argument', 'Email is required.');
+// ---------------------- FIREBASE FUNCTIONS ----------------------
+
+exports.auth_requestCode = onCall(
+  {
+    region: "us-central1",
+    secrets: ["MJ_API_KEY", "MJ_API_SECRET", "MJ_SENDER"],
+  },
+  async (request) => {
+    const email = normalizeEmail(request.data?.email);
+    if (!emailRegex.test(email)) {
+      throw new HttpsError("invalid-argument", "Email is required.");
+    }
+
+    const code = generateCode();
+    const salt = crypto.randomBytes(16).toString("hex");
+    const codeHash = hashCode(code, salt);
+    const now = Date.now();
+    const docRef = db.collection(CODE_COLLECTION).doc(docIdForEmail(email));
+
+    await docRef.set({
+      email,
+      codeHash,
+      salt,
+      createdAt: now,
+      expiresAt: now + CODE_TTL_SECONDS * 1000,
+      attemptCount: 0,
+      lastAttemptAt: null,
+    });
+
+    await sendLoginEmail(email, code);
+    return { success: true };
   }
+);
 
-  const code = generateCode();
-  const salt = crypto.randomBytes(16).toString('hex');
-  const codeHash = hashCode(code, salt);
-  const now = Date.now();
-  const docRef = db.collection(CODE_COLLECTION).doc(docIdForEmail(email));
+exports.auth_verifyCode = onCall(
+  {
+    region: "us-central1",
+    secrets: ["MJ_API_KEY", "MJ_API_SECRET", "MJ_SENDER"],
+  },
+  async (request) => {
+    const email = normalizeEmail(request.data?.email);
+    const code = (request.data?.code ?? "").toString().trim();
 
-  await docRef.set({
-    email,
-    codeHash,
-    salt,
-    createdAt: now,
-    expiresAt: now + CODE_TTL_SECONDS * 1000,
-    attemptCount: 0,
-    lastAttemptAt: null,
-  });
+    if (!emailRegex.test(email) || code.length !== 6) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Email and 6-digit code are required."
+      );
+    }
 
-  await sendLoginEmail(email, code);
-  return { success: true };
-});
+    const docRef = db.collection(CODE_COLLECTION).doc(docIdForEmail(email));
+    const snap = await docRef.get();
+    if (!snap.exists)
+      throw new HttpsError("not-found", "No code found. Request a new one.");
 
-exports.auth_verifyCode = onCall(async (request) => {
-  const email = normalizeEmail(request.data?.email);
-  const code = (request.data?.code ?? '').toString().trim();
+    const data = snap.data();
+    const now = Date.now();
 
-  if (!emailRegex.test(email) || code.length !== 6) {
-    throw new HttpsError('invalid-argument', 'Email and 6-digit code are required.');
-  }
+    if (data.expiresAt && data.expiresAt < now) {
+      await docRef.delete().catch(() => {});
+      throw new HttpsError(
+        "deadline-exceeded",
+        "Code expired. Request a new one."
+      );
+    }
 
-  const docRef = db.collection(CODE_COLLECTION).doc(docIdForEmail(email));
-  const snap = await docRef.get();
-  if (!snap.exists) throw new HttpsError('not-found', 'No code found. Request a new one.');
+    if ((data.attemptCount ?? 0) >= MAX_ATTEMPTS) {
+      await docRef.delete().catch(() => {});
+      throw new HttpsError(
+        "resource-exhausted",
+        "Too many invalid attempts. Request a new code."
+      );
+    }
 
-  const data = snap.data();
-  const now = Date.now();
+    const expectedHash = hashCode(code, data.salt);
+    if (expectedHash !== data.codeHash) {
+      await docRef
+        .update({ attemptCount: FieldValue.increment(1), lastAttemptAt: now })
+        .catch(() => {});
+      throw new HttpsError("permission-denied", "Invalid code.");
+    }
 
-  if (data.expiresAt && data.expiresAt < now) {
     await docRef.delete().catch(() => {});
-    throw new HttpsError('deadline-exceeded', 'Code expired. Request a new one.');
+
+    const userRecord = await ensureUser(email);
+    const customToken = await auth.createCustomToken(userRecord.uid);
+
+    logger.info("✅ Auth code verified", { email, uid: userRecord.uid });
+    return { customToken };
   }
-
-  if ((data.attemptCount ?? 0) >= MAX_ATTEMPTS) {
-    await docRef.delete().catch(() => {});
-    throw new HttpsError('resource-exhausted', 'Too many invalid attempts. Request a new code.');
-  }
-
-  const expectedHash = hashCode(code, data.salt);
-  if (expectedHash !== data.codeHash) {
-    await docRef.update({ attemptCount: FieldValue.increment(1), lastAttemptAt: now }).catch(() => {});
-    throw new HttpsError('permission-denied', 'Invalid code.');
-  }
-
-  await docRef.delete().catch(() => {});
-
-  const userRecord = await ensureUser(email);
-  const customToken = await auth.createCustomToken(userRecord.uid);
-
-  logger.info('Auth code verified', { email, uid: userRecord.uid });
-  return { customToken };
-});
+);

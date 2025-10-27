@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // Import all onboarding pages
 import 'onboarding_name.dart';
@@ -16,7 +18,8 @@ import 'onboarding_dark_habits.dart';
 import 'onboarding_transformation.dart';
 
 class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({super.key});
+  final int? startStep; // ✅ optional
+  const OnboardingScreen({super.key, this.startStep});
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -24,8 +27,9 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   int _currentStep = 0;
+  bool _loading = true;
 
-  // Collected data from the user
+  // User Data
   String? name;
   String? ageGroup;
   String? gender;
@@ -36,54 +40,99 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   String? motivation;
   List<String>? darkHabits;
 
-  /// Dynamically build onboarding screens (safe and lazy-loaded)
+  final _firestore = FirebaseFirestore.instance;
+  final _auth = FirebaseAuth.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentStep = widget.startStep ?? 0; // ✅ start from saved step if provided
+    _loadProgress();
+  }
+
+  /// ✅ Load user onboarding step from Firestore
+  Future<void> _loadProgress() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    final doc = await _firestore.collection('users').doc(user.uid).get();
+    if (doc.exists) {
+      final data = doc.data() ?? {};
+      setState(() {
+        _currentStep = data['onboardingStep'] ?? widget.startStep ?? 0;
+        _loading = false;
+      });
+    } else {
+      setState(() => _loading = false);
+    }
+  }
+
+  /// ✅ Save progress to Firestore
+  Future<void> _saveProgress() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    await _firestore.collection('users').doc(user.uid).set({
+      'onboardingStep': _currentStep,
+      'onboardingCompleted': false,
+    }, SetOptions(merge: true));
+  }
+
+  /// ✅ Mark onboarding completed
+  Future<void> _markCompleted() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    await _firestore.collection('users').doc(user.uid).set({
+      'onboardingCompleted': true,
+      'onboardingStep': _currentStep,
+    }, SetOptions(merge: true));
+  }
+
+  /// ✅ Move forward
+  void nextStep() async {
+    if (_currentStep < totalSteps - 1) {
+      setState(() => _currentStep++);
+      await _saveProgress();
+    } else {
+      await _markCompleted();
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/home_screen');
+      }
+    }
+  }
+
+  /// ✅ Move backward
+  void prevStep() async {
+    if (_currentStep > 0) {
+      setState(() => _currentStep--);
+      await _saveProgress();
+    }
+  }
+
+  /// ✅ All Screens (your existing pages)
   List<Widget> get screens => [
-        // 1️⃣ Name
         OnboardingName(onNext: (value) {
           name = value;
           nextStep();
         }),
-
-        // 2️⃣ Intro
         OnboardingIntro(onStart: nextStep),
-
-        // 3️⃣ Age
-        OnboardingAge(
-          onBack: prevStep,
-          onNext: (selectedAge) {
-            ageGroup = selectedAge;
-            nextStep();
-          },
-        ),
-
-        // 4️⃣ Gender
-        OnboardingGender(
-          onBack: prevStep,
-          onNext: (selectedGender) {
-            gender = selectedGender;
-            nextStep();
-          },
-        ),
-
-        // 5️⃣ Life description
-        OnboardingLifeDescription(
-          onBack: prevStep,
-          onNext: (desc) {
-            lifeDescription = desc;
-            nextStep();
-          },
-        ),
-
-        // 6️⃣ Character selection
-        OnboardingCharacter(
-          onBack: prevStep,
-          onNext: (selectedCharacter) {
-            character = selectedCharacter;
-            nextStep();
-          },
-        ),
-
-        // 7️⃣ Confirm age
+        OnboardingAge(onBack: prevStep, onNext: (value) {
+          ageGroup = value;
+          nextStep();
+        }),
+        OnboardingGender(onBack: prevStep, onNext: (value) {
+          gender = value;
+          nextStep();
+        }),
+        OnboardingLifeDescription(onBack: prevStep, onNext: (desc) {
+          lifeDescription = desc;
+          nextStep();
+        }),
+        OnboardingCharacter(onBack: prevStep, onNext: (value) {
+          character = value;
+          nextStep();
+        }),
         OnboardingConfirmAge(
           name: name ?? 'User',
           gender: gender ?? 'Male',
@@ -93,75 +142,40 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             nextStep();
           },
         ),
-
-        // 8️⃣ Notification
-        OnboardingNotification(
-          name: name ?? 'User',
-          onAccept: nextStep,
-        ),
-
-        // 9️⃣ Awakening
+        OnboardingNotification(name: name ?? 'User', onAccept: nextStep),
         OnboardingAwakening(onNext: nextStep),
-
-        // 🔟 Main character
-        OnboardingMainCharacter(
-          onBack: prevStep,
-          onNext: (answer) {
-            mainCharacterFeeling = answer;
-            nextStep();
-          },
-        ),
-
-        // 11️⃣ Journey drive
-        OnboardingJourneyDrive(
-          onBack: prevStep,
-          onNext: (drive) {
-            motivation = drive;
-            nextStep();
-          },
-        ),
-
-        // 12️⃣ Dark habits
-        OnboardingDarkHabits(
-          onBack: prevStep,
-          onNext: (habits) {
-            darkHabits = habits;
-            nextStep();
-          },
-        ),
-
-        // 13️⃣ Final transformation
-        OnboardingTransformation(
-          onFinish: () {
+        OnboardingMainCharacter(onBack: prevStep, onNext: (answer) {
+          mainCharacterFeeling = answer;
+          nextStep();
+        }),
+        OnboardingJourneyDrive(onBack: prevStep, onNext: (drive) {
+          motivation = drive;
+          nextStep();
+        }),
+        OnboardingDarkHabits(onBack: prevStep, onNext: (habits) {
+          darkHabits = habits;
+          nextStep();
+        }),
+        OnboardingTransformation(onFinish: () async {
+          await _markCompleted();
+          if (mounted) {
             Navigator.pushReplacementNamed(context, '/home_screen');
-          },
-        ),
+          }
+        }),
       ];
 
-  /// Total number of steps (auto-updates if you add/remove pages)
   int get totalSteps => screens.length;
-
-  /// Current progress (0.0 – 1.0)
   double get progress => (_currentStep + 1) / totalSteps;
-
-  /// Move forward to next screen
-  void nextStep() {
-    if (_currentStep < totalSteps - 1) {
-      setState(() => _currentStep++);
-    } else {
-      Navigator.pushReplacementNamed(context, '/home_screen');
-    }
-  }
-
-  /// Move back to previous screen
-  void prevStep() {
-    if (_currentStep > 0) {
-      setState(() => _currentStep--);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(child: CircularProgressIndicator(color: Colors.orange)),
+      );
+    }
+
     final current = screens[_currentStep];
 
     return Scaffold(
@@ -179,7 +193,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
-/// ✅ Inherited widget to share progress + step info with all pages
+/// ✅ Inherited widget (unchanged)
 class InheritedOnboardingProgress extends InheritedWidget {
   final double progress;
   final int stepIndex;
@@ -193,10 +207,9 @@ class InheritedOnboardingProgress extends InheritedWidget {
     required super.child,
   });
 
-  static InheritedOnboardingProgress? of(BuildContext context) {
-    return context.dependOnInheritedWidgetOfExactType<
-        InheritedOnboardingProgress>();
-  }
+  static InheritedOnboardingProgress? of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<
+          InheritedOnboardingProgress>();
 
   @override
   bool updateShouldNotify(covariant InheritedOnboardingProgress oldWidget) =>

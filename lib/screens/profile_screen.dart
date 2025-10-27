@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../widgets/custom_button.dart';
+import '../screens/auth/sign_in_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final UserModel user;
@@ -28,6 +31,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _nameController.dispose();
     _goalController.dispose();
     super.dispose();
+  }
+
+  Future<void> _logout(BuildContext context) async {
+    try {
+      await FirebaseAuth.instance.signOut();
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Logged out successfully 🚪")),
+        );
+
+        // Clear any navigation stack and go to sign-in
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const SignInScreen()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Logout failed: $e")),
+      );
+    }
   }
 
   @override
@@ -95,14 +121,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
             // Edit or Save button
             CustomButton(
               text: isEditing ? "Save Changes" : "Edit Profile",
-              onPressed: () {
-                setState(() {
-                  if (isEditing) {
+              onPressed: () async {
+                if (isEditing) {
+                  // Save changes to Firestore
+                  final userDoc = FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(widget.user.id);
+                  await userDoc.update({
+                    'name': _nameController.text.trim(),
+                    'goal': _goalController.text.trim(),
+                  });
+
+                  setState(() {
                     widget.user.name = _nameController.text;
                     widget.user.goal = _goalController.text;
-                  }
-                  isEditing = !isEditing;
-                });
+                  });
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Profile updated ✅")),
+                  );
+                }
+                setState(() => isEditing = !isEditing);
               },
             ),
 
@@ -115,12 +154,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             // Logout
             TextButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Logged out successfully 🚪")),
-                );
-                // TODO: Add actual logout logic later
-              },
+              onPressed: () => _logout(context),
               icon: const Icon(Icons.logout, color: Colors.redAccent),
               label: const Text(
                 "Logout",
