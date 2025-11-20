@@ -59,6 +59,8 @@ class LanguageProvider extends ChangeNotifier {
       'continue' : 'Continue',
       'skip'     : 'Skip →',
       'welcome'  : 'Welcome to Reclaim 👋',
+      'welcome_message': 'You\'re all set! Let\'s start your journey to reclaim your life.',
+      'get_started': 'Get Started',
       'namePrompt': "Let's start by knowing your name.",
       'howOld'   : 'How old are you?',
       'genderQuestion': "What's your gender?",
@@ -68,6 +70,10 @@ class LanguageProvider extends ChangeNotifier {
       'awakening_line1': 'You were just another face in',
       'awakening_line2': 'the crowd.',
       'awakening_line3': 'Tired. Stuck. Running on\nautopilot... until now.',
+
+      // Name screen
+      'onboarding_name.title'  : "What's your name?",
+      'onboarding_name.hint'   : 'Enter your name',
 
       // Age screen
       'onboarding_age.title'   : 'How old are you?',
@@ -128,6 +134,8 @@ class LanguageProvider extends ChangeNotifier {
       'continue' : 'जारी राख्नुहोस्',
       'skip'     : 'छोड्नुहोस् →',
       'welcome'  : 'Reclaim मा स्वागत छ 👋',
+      'welcome_message': 'तपाईं तयार हुनुहुन्छ! आफ्नो जीवन पुन: प्राप्त गर्ने यात्रा सुरु गरौं।',
+      'get_started': 'सुरु गर्नुहोस्',
       'namePrompt': 'तपाईंको नाम बताउनुहोस्।',
       'howOld'   : 'तपाईंको उमेर कति हो?',
       'genderQuestion': 'तपाईंको लिङ्ग के हो?',
@@ -137,6 +145,10 @@ class LanguageProvider extends ChangeNotifier {
       'awakening_line1': 'तपाईं भीडमा अरू जस्तै मात्र हुनुहुन्थ्यो',
       'awakening_line2': 'भीडमा हराउनु भएको थियो।',
       'awakening_line3': 'थकित। रोकिएका। स्वत: ढंगले बाँचिरहेका... अब होइन।',
+
+      // Name screen
+      'onboarding_name.title'  : 'तपाईंको नाम के हो?',
+      'onboarding_name.hint'   : 'तपाईंको नाम प्रविष्ट गर्नुहोस्',
 
       // Age screen
       'onboarding_age.title'   : 'तपाईंको उमेर कति हो?',

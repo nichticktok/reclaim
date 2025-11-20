@@ -1,0 +1,697 @@
+================================================================================
+                    CORE DIRECTORY - COMPLETE GUIDE
+================================================================================
+
+The `lib/core/` directory contains shared, app-wide utilities, configurations,
+and constants that are used across multiple features. These are NOT feature-specific.
+
+================================================================================
+                          CORE DIRECTORY STRUCTURE
+================================================================================
+
+lib/core/
+├── constants/          # App-wide constants
+├── errors/             # Custom error classes and exception handling
+├── firebase/           # Firebase configuration and setup
+├── theme/              # App theme, colors, text styles
+└── utils/              # Utility functions and helpers
+
+================================================================================
+                          1. CONSTANTS (core/constants/)
+================================================================================
+
+Purpose: Store app-wide constant values that don't change
+
+WHAT TO PUT HERE:
+✅ API endpoints and base URLs
+✅ App version and build numbers
+✅ Default values (timeouts, limits, etc.)
+✅ Collection names (Firestore collections)
+✅ Storage keys (SharedPreferences keys)
+✅ Regex patterns
+✅ Magic numbers that are used in multiple places
+
+EXAMPLES:
+
+core/constants/app_constants.dart:
+```dart
+class AppConstants {
+  // App Info
+  static const String appName = 'Reclaim';
+  static const String appVersion = '1.0.0';
+  
+  // Timeouts
+  static const Duration networkTimeout = Duration(seconds: 30);
+  static const Duration authTimeout = Duration(seconds: 10);
+  
+  // Limits
+  static const int maxHabitsPerDay = 10;
+  static const int maxReflectionLength = 500;
+  
+  // Firestore Collections
+  static const String usersCollection = 'users';
+  static const String habitsCollection = 'habits';
+  static const String progressCollection = 'progress';
+  static const String reflectionsCollection = 'reflections';
+  
+  // Storage Keys
+  static const String keyUserId = 'user_id';
+  static const String keyOnboardingCompleted = 'onboarding_completed';
+  static const String keyLanguage = 'language';
+  
+  // Regex Patterns
+  static const String emailPattern = r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$';
+  static const String phonePattern = r'^\+?[1-9]\d{1,14}$';
+}
+```
+
+core/constants/api_constants.dart:
+```dart
+class ApiConstants {
+  static const String baseUrl = 'https://api.reclaim.app';
+  static const String authEndpoint = '/auth';
+  static const String habitsEndpoint = '/habits';
+  static const Duration requestTimeout = Duration(seconds: 30);
+}
+```
+
+core/constants/firestore_constants.dart:
+```dart
+class FirestoreConstants {
+  // Collection Names
+  static const String users = 'users';
+  static const String habits = 'habits';
+  static const String progress = 'progress';
+  static const String reflections = 'reflections';
+  static const String community = 'community';
+  
+  // Field Names
+  static const String fieldCreatedAt = 'createdAt';
+  static const String fieldUpdatedAt = 'updatedAt';
+  static const String fieldUserId = 'userId';
+  static const String fieldCompleted = 'completed';
+}
+```
+
+================================================================================
+                          2. ERRORS (core/errors/)
+================================================================================
+
+Purpose: Custom error classes and exception handling
+
+WHAT TO PUT HERE:
+✅ Custom exception classes
+✅ Error message constants
+✅ Error handling utilities
+✅ Error code definitions
+
+EXAMPLES:
+
+core/errors/app_exceptions.dart:
+```dart
+/// Base exception class
+abstract class AppException implements Exception {
+  final String message;
+  final String? code;
+  
+  AppException(this.message, [this.code]);
+  
+  @override
+  String toString() => message;
+}
+
+/// Network-related exceptions
+class NetworkException extends AppException {
+  NetworkException(String message, [String? code]) : super(message, code);
+}
+
+class TimeoutException extends NetworkException {
+  TimeoutException([String? message]) 
+    : super(message ?? 'Request timed out', 'TIMEOUT');
+}
+
+/// Firebase-related exceptions
+class FirestoreException extends AppException {
+  FirestoreException(String message, [String? code]) : super(message, code);
+}
+
+class AuthException extends AppException {
+  AuthException(String message, [String? code]) : super(message, code);
+}
+
+/// Validation exceptions
+class ValidationException extends AppException {
+  ValidationException(String message) : super(message, 'VALIDATION');
+}
+
+/// Not found exceptions
+class NotFoundException extends AppException {
+  NotFoundException(String resource) 
+    : super('$resource not found', 'NOT_FOUND');
+}
+```
+
+core/errors/error_handler.dart:
+```dart
+import 'package:flutter/material.dart';
+
+class ErrorHandler {
+  static void showError(BuildContext context, dynamic error) {
+    String message = 'An error occurred';
+    
+    if (error is AppException) {
+      message = error.message;
+    } else if (error is FirebaseException) {
+      message = _getFirebaseErrorMessage(error);
+    } else {
+      message = error.toString();
+    }
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+  
+  static String _getFirebaseErrorMessage(FirebaseException error) {
+    switch (error.code) {
+      case 'permission-denied':
+        return 'You don\'t have permission to perform this action';
+      case 'unavailable':
+        return 'Service is temporarily unavailable';
+      default:
+        return error.message ?? 'An error occurred';
+    }
+  }
+}
+```
+
+================================================================================
+                          3. FIREBASE (core/firebase/)
+================================================================================
+
+Purpose: Firebase configuration and initialization
+
+WHAT TO PUT HERE:
+✅ Firebase initialization code
+✅ Firebase configuration
+✅ Emulator setup
+✅ Firebase service wrappers
+
+EXAMPLES:
+
+core/firebase/firebase_config.dart:
+```dart
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:flutter/foundation.dart';
+import '../../firebase_options.dart';
+
+class FirebaseConfig {
+  static Future<void> initialize() async {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    
+    // App Check
+    if (kDebugMode) {
+      await FirebaseAppCheck.instance.activate(
+        appleProvider: AppleProvider.debug,
+        androidProvider: AndroidProvider.debug,
+      );
+    }
+    
+    // Emulator setup (if needed)
+    if (kDebugMode && _useEmulators) {
+      await _setupEmulators();
+    }
+  }
+  
+  static Future<void> _setupEmulators() async {
+    // Auth emulator
+    await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
+    
+    // Firestore emulator
+    FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8080);
+  }
+  
+  static const bool _useEmulators = false;
+}
+```
+
+core/firebase/firestore_helpers.dart:
+```dart
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+class FirestoreHelpers {
+  /// Convert Firestore timestamp to DateTime safely
+  static DateTime? timestampToDateTime(dynamic timestamp) {
+    if (timestamp == null) return null;
+    if (timestamp is Timestamp) return timestamp.toDate();
+    if (timestamp is DateTime) return timestamp;
+    return null;
+  }
+  
+  /// Get server timestamp
+  static FieldValue serverTimestamp() => FieldValue.serverTimestamp();
+  
+  /// Create a batch write
+  static WriteBatch batch() => FirebaseFirestore.instance.batch();
+}
+```
+
+================================================================================
+                          4. THEME (core/theme/)
+================================================================================
+
+Purpose: App-wide styling, colors, and theme configuration
+
+WHAT TO PUT HERE:
+✅ Color definitions
+✅ Text styles
+✅ Theme data
+✅ App theme configuration
+✅ Dark/light theme variants
+
+EXAMPLES:
+
+core/theme/app_colors.dart:
+```dart
+import 'package:flutter/material.dart';
+
+class AppColors {
+  // Primary Colors
+  static const Color primary = Color(0xFFFF7A00);
+  static const Color primaryDark = Color(0xFFE66A00);
+  static const Color primaryLight = Color(0xFFFF9A33);
+  
+  // Background Colors
+  static const Color background = Color(0xFF0D0D0F);
+  static const Color surface = Color(0xFF1A1A1A);
+  static const Color surfaceLight = Color(0xFF2A2A2A);
+  
+  // Text Colors
+  static const Color textPrimary = Colors.white;
+  static const Color textSecondary = Color(0xFFB0B0B0);
+  static const Color textTertiary = Color(0xFF808080);
+  
+  // Accent Colors
+  static const Color success = Color(0xFF4CAF50);
+  static const Color error = Color(0xFFE53935);
+  static const Color warning = Color(0xFFFF9800);
+  static const Color info = Color(0xFF2196F3);
+  
+  // Gradient Colors
+  static const List<Color> primaryGradient = [
+    Color(0xFFFF7A00),
+    Color(0xFFFF9A33),
+  ];
+}
+```
+
+core/theme/app_text_styles.dart:
+```dart
+import 'package:flutter/material.dart';
+
+class AppTextStyles {
+  // Headings
+  static const TextStyle h1 = TextStyle(
+    fontSize: 32,
+    fontWeight: FontWeight.bold,
+    color: AppColors.textPrimary,
+    height: 1.2,
+  );
+  
+  static const TextStyle h2 = TextStyle(
+    fontSize: 24,
+    fontWeight: FontWeight.bold,
+    color: AppColors.textPrimary,
+    height: 1.3,
+  );
+  
+  static const TextStyle h3 = TextStyle(
+    fontSize: 20,
+    fontWeight: FontWeight.w600,
+    color: AppColors.textPrimary,
+    height: 1.4,
+  );
+  
+  // Body
+  static const TextStyle bodyLarge = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.normal,
+    color: AppColors.textPrimary,
+    height: 1.5,
+  );
+  
+  static const TextStyle bodyMedium = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.normal,
+    color: AppColors.textSecondary,
+    height: 1.5,
+  );
+  
+  static const TextStyle bodySmall = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.normal,
+    color: AppColors.textTertiary,
+    height: 1.4,
+  );
+  
+  // Buttons
+  static const TextStyle button = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    color: AppColors.textPrimary,
+    letterSpacing: 0.5,
+  );
+}
+```
+
+core/theme/app_theme.dart:
+```dart
+import 'package:flutter/material.dart';
+import 'app_colors.dart';
+import 'app_text_styles.dart';
+
+class AppTheme {
+  static ThemeData get darkTheme {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      primaryColor: AppColors.primary,
+      scaffoldBackgroundColor: AppColors.background,
+      colorScheme: const ColorScheme.dark(
+        primary: AppColors.primary,
+        secondary: AppColors.primaryLight,
+        surface: AppColors.surface,
+        error: AppColors.error,
+      ),
+      textTheme: const TextTheme(
+        displayLarge: AppTextStyles.h1,
+        displayMedium: AppTextStyles.h2,
+        displaySmall: AppTextStyles.h3,
+        bodyLarge: AppTextStyles.bodyLarge,
+        bodyMedium: AppTextStyles.bodyMedium,
+        bodySmall: AppTextStyles.bodySmall,
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        iconTheme: IconThemeData(color: AppColors.textPrimary),
+      ),
+      cardTheme: CardTheme(
+        color: AppColors.surface,
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+  }
+}
+```
+
+================================================================================
+                          5. UTILS (core/utils/)
+================================================================================
+
+Purpose: Reusable utility functions and helpers
+
+WHAT TO PUT HERE:
+✅ Date/time utilities
+✅ String manipulation helpers
+✅ Validation functions
+✅ Formatting utilities
+✅ Extension methods
+✅ Common calculations
+
+EXAMPLES:
+
+core/utils/date_utils.dart:
+```dart
+class DateUtils {
+  /// Format date to readable string
+  static String formatDate(DateTime date, {String format = 'MMM dd, yyyy'}) {
+    // Implementation using intl package
+    return 'Formatted date';
+  }
+  
+  /// Get start of day
+  static DateTime startOfDay(DateTime date) {
+    return DateTime(date.year, date.month, date.day);
+  }
+  
+  /// Get end of day
+  static DateTime endOfDay(DateTime date) {
+    return DateTime(date.year, date.month, date.day, 23, 59, 59);
+  }
+  
+  /// Check if date is today
+  static bool isToday(DateTime date) {
+    final now = DateTime.now();
+    return date.year == now.year &&
+           date.month == now.month &&
+           date.day == now.day;
+  }
+  
+  /// Get days difference
+  static int daysBetween(DateTime start, DateTime end) {
+    return end.difference(start).inDays;
+  }
+}
+```
+
+core/utils/string_utils.dart:
+```dart
+class StringUtils {
+  /// Capitalize first letter
+  static String capitalize(String text) {
+    if (text.isEmpty) return text;
+    return text[0].toUpperCase() + text.substring(1);
+  }
+  
+  /// Truncate string with ellipsis
+  static String truncate(String text, int maxLength) {
+    if (text.length <= maxLength) return text;
+    return '${text.substring(0, maxLength)}...';
+  }
+  
+  /// Check if string is valid email
+  static bool isValidEmail(String email) {
+    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
+  }
+  
+  /// Remove all whitespace
+  static String removeWhitespace(String text) {
+    return text.replaceAll(RegExp(r'\s+'), '');
+  }
+}
+```
+
+core/utils/validators.dart:
+```dart
+class Validators {
+  static String? email(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Email is required';
+    }
+    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+      return 'Please enter a valid email';
+    }
+    return null;
+  }
+  
+  static String? required(String? value, {String field = 'Field'}) {
+    if (value == null || value.isEmpty) {
+      return '$field is required';
+    }
+    return null;
+  }
+  
+  static String? minLength(String? value, int min, {String field = 'Field'}) {
+    if (value == null || value.length < min) {
+      return '$field must be at least $min characters';
+    }
+    return null;
+  }
+  
+  static String? maxLength(String? value, int max, {String field = 'Field'}) {
+    if (value != null && value.length > max) {
+      return '$field must be at most $max characters';
+    }
+    return null;
+  }
+}
+```
+
+core/utils/extensions.dart:
+```dart
+import 'package:flutter/material.dart';
+
+/// DateTime extensions
+extension DateTimeExtensions on DateTime {
+  bool get isToday {
+    final now = DateTime.now();
+    return year == now.year && month == now.month && day == now.day;
+  }
+  
+  bool get isYesterday {
+    final yesterday = DateTime.now().subtract(const Duration(days: 1));
+    return year == yesterday.year && 
+           month == yesterday.month && 
+           day == yesterday.day;
+  }
+}
+
+/// String extensions
+extension StringExtensions on String {
+  String get capitalize {
+    if (isEmpty) return this;
+    return this[0].toUpperCase() + substring(1);
+  }
+  
+  bool get isValidEmail {
+    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(this);
+  }
+}
+
+/// BuildContext extensions
+extension BuildContextExtensions on BuildContext {
+  ThemeData get theme => Theme.of(this);
+  MediaQueryData get mediaQuery => MediaQuery.of(this);
+  double get screenWidth => mediaQuery.size.width;
+  double get screenHeight => mediaQuery.size.height;
+}
+```
+
+core/utils/formatting_utils.dart:
+```dart
+class FormattingUtils {
+  /// Format number with commas
+  static String formatNumber(int number) {
+    return number.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]},',
+    );
+  }
+  
+  /// Format duration (e.g., "2h 30m")
+  static String formatDuration(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    
+    if (hours > 0) {
+      return '${hours}h ${minutes}m';
+    }
+    return '${minutes}m';
+  }
+  
+  /// Format file size
+  static String formatFileSize(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+}
+```
+
+================================================================================
+                          WHAT NOT TO PUT IN CORE
+================================================================================
+
+❌ Feature-specific code
+   → Put in lib/features/{feature}/
+
+❌ Business logic
+   → Put in controllers
+
+❌ Data models
+   → Put in lib/models/ or features/{feature}/models/
+
+❌ UI widgets
+   → Put in lib/widgets/ or features/{feature}/widgets/
+
+❌ Screen files
+   → Put in features/{feature}/screens/
+
+❌ Services that are feature-specific
+   → Put in features/{feature}/services/
+
+================================================================================
+                          BEST PRACTICES
+================================================================================
+
+1. KEEP IT GENERIC
+   - Core utilities should work for any feature
+   - Avoid feature-specific logic
+
+2. MAKE IT REUSABLE
+   - If it's only used in one feature, it doesn't belong in core
+   - If it's used in 2+ features, consider putting it in core
+
+3. DOCUMENT WELL
+   - Add clear comments
+   - Use descriptive names
+   - Include usage examples
+
+4. KEEP IT SIMPLE
+   - Core utilities should be simple and focused
+   - Complex logic should be in services or controllers
+
+5. TEST YOUR UTILITIES
+   - Core utilities are used everywhere
+   - Make sure they're well-tested
+
+================================================================================
+                          EXAMPLE STRUCTURE
+================================================================================
+
+lib/core/
+├── constants/
+│   ├── app_constants.dart
+│   ├── api_constants.dart
+│   └── firestore_constants.dart
+├── errors/
+│   ├── app_exceptions.dart
+│   └── error_handler.dart
+├── firebase/
+│   ├── firebase_config.dart
+│   └── firestore_helpers.dart
+├── theme/
+│   ├── app_colors.dart
+│   ├── app_text_styles.dart
+│   └── app_theme.dart
+└── utils/
+    ├── date_utils.dart
+    ├── string_utils.dart
+    ├── validators.dart
+    ├── formatting_utils.dart
+    └── extensions.dart
+
+================================================================================
+                          QUICK REFERENCE
+================================================================================
+
+✅ PUT IN CORE:
+- Constants used in multiple features
+- Error handling classes
+- Firebase configuration
+- App theme and colors
+- Utility functions used everywhere
+- Extension methods
+- Validation helpers
+
+❌ DON'T PUT IN CORE:
+- Feature-specific code
+- Business logic
+- Data models
+- UI components
+- Feature services
+
+================================================================================
+
