@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class ProgressModel {
   final String id;
   final String userId;
@@ -39,12 +41,34 @@ class ProgressModel {
     calculateSuccessRate();
   }
 
+  /// Helper method to convert Firestore Timestamp or String to DateTime
+  static DateTime? _parseDateTime(dynamic value) {
+    if (value == null) return null;
+    
+    // If it's a Firestore Timestamp
+    if (value is Timestamp) {
+      return value.toDate();
+    }
+    
+    // If it's already a DateTime
+    if (value is DateTime) {
+      return value;
+    }
+    
+    // If it's a String, try to parse it
+    if (value is String) {
+      return DateTime.tryParse(value);
+    }
+    
+    return null;
+  }
+
   // 🧱 JSON conversion
   factory ProgressModel.fromJson(Map<String, dynamic> json) {
     return ProgressModel(
       id: json['id'] ?? '',
       userId: json['userId'] ?? '',
-      date: DateTime.tryParse(json['date'] ?? '') ?? DateTime.now(),
+      date: _parseDateTime(json['date']) ?? DateTime.now(),
       totalHabits: json['totalHabits'] ?? 0,
       completedHabits: json['completedHabits'] ?? 0,
       verifiedHabits: json['verifiedHabits'] ?? 0,
@@ -58,7 +82,7 @@ class ProgressModel {
     return {
       'id': id,
       'userId': userId,
-      'date': date.toIso8601String(),
+      'date': Timestamp.fromDate(date), // Use Firestore Timestamp
       'totalHabits': totalHabits,
       'completedHabits': completedHabits,
       'verifiedHabits': verifiedHabits,

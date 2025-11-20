@@ -1,0 +1,393 @@
+================================================================================
+                    RECALIM PROJECT STRUCTURE DOCUMENTATION
+================================================================================
+
+This document details the complete file structure and organization of the
+Recalim Flutter project, following a feature-first architecture pattern.
+
+================================================================================
+                            ROOT DIRECTORY STRUCTURE
+================================================================================
+
+recalim/
+├── lib/                          # Main application code
+├── assets/                       # Images, icons, fonts, etc.
+├── android/                      # Android platform-specific code
+├── ios/                          # iOS platform-specific code
+├── web/                          # Web platform-specific code
+├── test/                         # Unit and widget tests
+├── pubspec.yaml                  # Flutter dependencies
+└── README.md                     # Project documentation
+
+================================================================================
+                          LIB DIRECTORY STRUCTURE
+================================================================================
+
+lib/
+│
+├── main.dart                     # Application entry point
+│
+├── core/                         # CORE - Shared utilities and configurations
+│   ├── constants/                # App-wide constants
+│   │   └── (constant files)
+│   ├── errors/                   # Error handling and custom exceptions
+│   │   └── (error classes)
+│   ├── firebase/                 # Firebase configuration and setup
+│   │   └── (firebase config files)
+│   ├── theme/                    # App theme, colors, text styles
+│   │   └── (theme files)
+│   └── utils/                     # Utility functions and helpers
+│       └── (utility files)
+│
+├── features/                     # FEATURES - Feature-based modules
+│   │
+│   ├── auth/                     # Authentication Feature
+│   │   ├── controllers/
+│   │   │   └── auth_controller.dart      # Auth business logic & state
+│   │   ├── services/
+│   │   │   └── (auth services if needed)
+│   │   ├── screens/
+│   │   │   └── sign_in_screen.dart       # Sign-in UI
+│   │   ├── models/
+│   │   │   └── (auth-specific models)
+│   │   └── widgets/
+│   │       └── (auth-specific widgets)
+│   │
+│   ├── home/                     # Home/Dashboard Feature
+│   │   ├── controllers/
+│   │   │   └── home_controller.dart      # Home state management
+│   │   ├── services/
+│   │   │   └── home_service.dart         # User data loading
+│   │   ├── screens/
+│   │   │   └── home_screen.dart          # Main home screen
+│   │   └── widgets/
+│   │       └── (home-specific widgets)
+│   │
+│   ├── onboarding/               # Onboarding Flow Feature
+│   │   ├── controllers/
+│   │   │   └── onboarding_controller.dart  # Onboarding state & logic
+│   │   ├── services/
+│   │   │   └── onboarding_service.dart      # Onboarding data operations
+│   │   ├── screens/
+│   │   │   ├── onboarding_screen.dart     # Main onboarding coordinator
+│   │   │   ├── onboarding_intro.dart      # Introduction screen
+│   │   │   ├── onboarding_name.dart       # Name input screen
+│   │   │   ├── onboarding_age.dart        # Age selection screen
+│   │   │   ├── onboarding_gender.dart     # Gender selection screen
+│   │   │   ├── onboarding_life_description.dart
+│   │   │   ├── onboarding_character.dart
+│   │   │   ├── onboarding_confirm_age.dart
+│   │   │   ├── onboarding_notification.dart
+│   │   │   ├── onboarding_awakening.dart
+│   │   │   ├── onboarding_main_character.dart
+│   │   │   ├── onboarding_journey_drive.dart
+│   │   │   ├── onboarding_dark_habits.dart
+│   │   │   ├── onboarding_transformation.dart
+│   │   │   └── (other onboarding screens)
+│   │   ├── models/
+│   │   │   └── (onboarding-specific models)
+│   │   └── widgets/
+│   │       └── onboarding_header.dart    # Shared onboarding header
+│   │
+│   ├── tasks/                     # Tasks/Habits Feature
+│   │   ├── controllers/
+│   │   │   └── tasks_controller.dart     # Tasks state management
+│   │   ├── services/
+│   │   │   └── tasks_service.dart        # Tasks data operations
+│   │   ├── screens/
+│   │   │   ├── daily_tasks_screen.dart   # Daily tasks list
+│   │   │   └── task_detail_screen.dart   # Task detail view
+│   │   ├── models/
+│   │   │   └── (task-specific models)
+│   │   └── widgets/
+│   │       └── (task-specific widgets)
+│   │
+│   ├── progress/                  # Progress Tracking Feature
+│   │   ├── controllers/
+│   │   │   └── progress_controller.dart  # Progress state management
+│   │   ├── services/
+│   │   │   └── progress_service.dart     # Progress data operations
+│   │   ├── screens/
+│   │   │   └── progress_screen.dart      # Progress visualization
+│   │   └── widgets/
+│   │       └── (progress-specific widgets)
+│   │
+│   ├── profile/                   # User Profile Feature
+│   │   ├── controllers/
+│   │   │   └── profile_controller.dart   # Profile state management
+│   │   ├── services/
+│   │   │   └── profile_service.dart      # Profile data operations
+│   │   ├── screens/
+│   │   │   └── profile_screen.dart       # Profile UI
+│   │   └── widgets/
+│   │       └── (profile-specific widgets)
+│   │
+│   ├── community/                 # Community Feature
+│   │   ├── controllers/
+│   │   │   └── community_controller.dart # Community state management
+│   │   ├── services/
+│   │   │   └── community_service.dart    # Community data operations
+│   │   ├── screens/
+│   │   │   └── community_screen.dart     # Community feed
+│   │   └── widgets/
+│   │       └── (community-specific widgets)
+│   │
+│   └── reflection/                # Reflection Feature
+│       ├── controllers/
+│       │   └── reflection_controller.dart # Reflection state management
+│       ├── services/
+│       │   └── reflection_service.dart    # Reflection data operations
+│       ├── screens/
+│       │   └── reflection_screen.dart    # Reflection UI
+│       └── widgets/
+│           └── (reflection-specific widgets)
+│
+├── models/                        # SHARED MODELS - Used across features
+│   ├── user_model.dart           # User data model
+│   ├── habit_model.dart          # Habit/Task model
+│   └── progress_model.dart       # Progress tracking model
+│
+├── providers/                     # GLOBAL PROVIDERS - App-wide state
+│   └── language_provider.dart    # Language/localization provider
+│
+├── widgets/                       # SHARED WIDGETS - Reusable UI components
+│   ├── custom_button.dart        # Custom button widget
+│   ├── habit_card.dart           # Habit display card
+│   ├── progress_ring.dart        # Progress visualization
+│   ├── proof_input_box.dart      # Proof submission input
+│   ├── reflection_card.dart      # Reflection input card
+│   └── onboarding_header.dart    # (Moved to features/onboarding/widgets)
+│
+├── routes/                        # Navigation routes (if using named routes)
+│   └── (route definitions)
+│
+├── data/                          # DATA LAYER - Repositories and data sources
+│   ├── repositories/
+│   │   └── (repository implementations)
+│   ├── habit_repository.dart
+│   └── firestore_habit_repository.dart
+│
+├── services/                      # SHARED SERVICES - Cross-feature services
+│   ├── subscription_service.dart
+│   └── (other shared services)
+│
+├── subscription/                  # Subscription Feature (if separate)
+│   ├── controllers/
+│   ├── models/
+│   ├── screens/
+│   └── services/
+│
+└── web/                           # Web-specific code
+    └── landing_page.dart
+
+================================================================================
+                          ARCHITECTURE PATTERNS
+================================================================================
+
+1. FEATURE-FIRST STRUCTURE
+   - Each feature is self-contained with its own controllers, services, screens
+   - Features can be developed and tested independently
+   - Easy to locate code related to a specific feature
+
+2. SEPARATION OF CONCERNS
+   ├── Controllers (Business Logic)
+   │   └── Handle state management, user interactions, business rules
+   ├── Services (Data Layer)
+   │   └── Handle API calls, database operations, external services
+   ├── Screens (UI Layer)
+   │   └── Display UI, handle user input, delegate to controllers
+   └── Models (Data Structures)
+       └── Define data structures used across the app
+
+3. STATE MANAGEMENT
+   - Uses Provider pattern with ChangeNotifier
+   - Controllers extend ChangeNotifier for reactive state updates
+   - Screens consume state via Consumer or Provider.of
+
+4. DEPENDENCY INJECTION
+   - Services are instantiated in controllers
+   - Controllers are provided via Provider at app level
+   - Easy to mock for testing
+
+================================================================================
+                          IMPORT PATTERNS
+================================================================================
+
+1. FEATURE INTERNAL IMPORTS
+   └── Use relative paths within the feature
+       Example: import '../controllers/tasks_controller.dart'
+
+2. CROSS-FEATURE IMPORTS
+   └── Use absolute paths from lib root
+       Example: import 'models/user_model.dart'
+
+3. SHARED RESOURCES
+   └── Use absolute paths from lib root
+       Example: import 'widgets/custom_button.dart'
+       Example: import 'providers/language_provider.dart'
+
+4. CORE UTILITIES
+   └── Use absolute paths from lib root
+       Example: import 'core/theme/app_theme.dart'
+       Example: import 'core/utils/validators.dart'
+
+================================================================================
+                          FILE NAMING CONVENTIONS
+================================================================================
+
+Controllers:    {feature}_controller.dart
+Services:       {feature}_service.dart
+Screens:        {feature}_screen.dart or {specific_name}_screen.dart
+Models:         {entity}_model.dart
+Widgets:        {widget_name}.dart (snake_case)
+Constants:      {domain}_constants.dart
+
+Examples:
+- home_controller.dart
+- tasks_service.dart
+- onboarding_age.dart
+- user_model.dart
+- custom_button.dart
+
+================================================================================
+                          DEVELOPMENT WORKFLOW
+================================================================================
+
+1. ADDING A NEW FEATURE
+   ├── Create feature directory: lib/features/{feature_name}/
+   ├── Create subdirectories: controllers/, services/, screens/, widgets/
+   ├── Create controller: {feature}_controller.dart
+   ├── Create service: {feature}_service.dart
+   ├── Create screens as needed
+   └── Register controller in main.dart MultiProvider
+
+2. ADDING A NEW SCREEN
+   ├── Create screen file in appropriate feature/screens/
+   ├── Use Consumer or Provider.of to access controller
+   ├── Delegate business logic to controller
+   └── Update routes if using named routes
+
+3. ADDING BUSINESS LOGIC
+   ├── Add logic to controller, not screen
+   ├── Use service for data operations
+   └── Notify listeners when state changes
+
+4. ADDING DATA OPERATIONS
+   ├── Add methods to service
+   ├── Service handles all Firebase/API calls
+   └── Controller calls service methods
+
+================================================================================
+                          MIGRATION STATUS
+================================================================================
+
+✅ COMPLETED:
+   - Feature structure created
+   - Controllers and services implemented
+   - Home feature restructured
+   - Auth feature restructured
+   - Tasks, Progress, Profile, Community, Reflection features created
+   - Onboarding screens moved to features/onboarding/screens/
+
+⏳ IN PROGRESS:
+   - Updating imports in moved files
+   - Updating screens to use controllers
+   - Moving widgets to appropriate feature folders
+
+📋 TODO:
+   - Update all screen files to use controllers via Provider
+   - Move shared widgets to appropriate locations
+   - Update main.dart routes
+   - Remove old files from lib/screens/ after migration
+   - Add unit tests for controllers and services
+
+================================================================================
+                          BEST PRACTICES
+================================================================================
+
+1. KEEP SCREENS THIN
+   - Screens should only handle UI rendering
+   - All business logic goes in controllers
+   - All data operations go in services
+
+2. USE PROVIDER CORRECTLY
+   - Provide controllers at the app level
+   - Use Consumer for reactive updates
+   - Use Provider.of for one-time access
+
+3. HANDLE ERRORS GRACEFULLY
+   - Catch errors in controllers
+   - Show user-friendly error messages
+   - Log errors for debugging
+
+4. KEEP FEATURES INDEPENDENT
+   - Features should not directly import from other features
+   - Use shared models for cross-feature data
+   - Use services for cross-feature operations
+
+5. FOLLOW NAMING CONVENTIONS
+   - Use consistent naming across the project
+   - Make file names descriptive
+   - Group related files together
+
+================================================================================
+                          EXAMPLE USAGE
+================================================================================
+
+// In a Screen (lib/features/tasks/screens/daily_tasks_screen.dart)
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../controllers/tasks_controller.dart';
+import '../../../widgets/habit_card.dart';
+
+class DailyTasksScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<TasksController>(
+      builder: (context, controller, child) {
+        if (controller.loading) {
+          return CircularProgressIndicator();
+        }
+        
+        return ListView(
+          children: controller.getFilteredHabits().map((habit) =>
+            HabitCard(habit: habit)
+          ).toList(),
+        );
+      },
+    );
+  }
+}
+
+// In a Controller (lib/features/tasks/controllers/tasks_controller.dart)
+import 'package:flutter/foundation.dart';
+import '../services/tasks_service.dart';
+import '../../../models/habit_model.dart';
+
+class TasksController extends ChangeNotifier {
+  final TasksService _service = TasksService();
+  List<HabitModel> _habits = [];
+  
+  Future<void> initialize() async {
+    _habits = await _service.loadHabits();
+    notifyListeners();
+  }
+}
+
+// In a Service (lib/features/tasks/services/tasks_service.dart)
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../models/habit_model.dart';
+
+class TasksService {
+  Future<List<HabitModel>> loadHabits() async {
+    // Firestore operations here
+  }
+}
+
+================================================================================
+                          END OF DOCUMENTATION
+================================================================================
+
+Last Updated: November 2024
+Maintained by: Development Team
+

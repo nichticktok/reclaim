@@ -1,0 +1,174 @@
+================================================================================
+                    FILE MIGRATION CHECKLIST
+================================================================================
+
+This checklist tracks the migration of files from the old structure to the
+new feature-first architecture.
+
+================================================================================
+                          COMPLETED MIGRATIONS
+================================================================================
+
+✅ FEATURES CREATED:
+   - lib/features/auth/
+     ├── controllers/auth_controller.dart
+     └── screens/sign_in_screen.dart
+
+   - lib/features/home/
+     ├── controllers/home_controller.dart
+     ├── services/home_service.dart
+     └── screens/home_screen.dart
+
+   - lib/features/onboarding/
+     ├── controllers/onboarding_controller.dart
+     ├── services/onboarding_service.dart
+     ├── screens/ (all onboarding screens moved)
+     └── widgets/onboarding_header.dart
+
+   - lib/features/tasks/
+     ├── controllers/tasks_controller.dart
+     ├── services/tasks_service.dart
+     └── screens/ (daily_tasks_screen.dart, task_detail_screen.dart)
+
+   - lib/features/progress/
+     ├── controllers/progress_controller.dart
+     ├── services/progress_service.dart
+     └── screens/progress_screen.dart
+
+   - lib/features/profile/
+     ├── controllers/profile_controller.dart
+     ├── services/profile_service.dart
+     └── screens/profile_screen.dart
+
+   - lib/features/community/
+     ├── controllers/community_controller.dart
+     ├── services/community_service.dart
+     └── screens/community_screen.dart
+
+   - lib/features/reflection/
+     ├── controllers/reflection_controller.dart
+     ├── services/reflection_service.dart
+     └── screens/reflection_screen.dart
+
+✅ FILES MOVED:
+   - All onboarding screens → lib/features/onboarding/screens/
+   - onboarding_header.dart → lib/features/onboarding/widgets/
+   - sign_in_screen.dart → lib/features/auth/screens/
+   - home_screen.dart → lib/features/home/screens/
+   - daily_tasks_screen.dart → lib/features/tasks/screens/
+   - task_detail_screen.dart → lib/features/tasks/screens/
+   - progress_screen.dart → lib/features/progress/screens/
+   - profile_screen.dart → lib/features/profile/screens/
+   - community_screen.dart → lib/features/community/screens/
+   - reflection_screen.dart → lib/features/reflection/screens/
+
+✅ IMPORTS UPDATED:
+   - main.dart updated to use new feature paths
+   - Onboarding screens updated to use correct relative imports
+   - Onboarding header widget updated
+
+================================================================================
+                          PENDING TASKS
+================================================================================
+
+⏳ UPDATE SCREENS TO USE CONTROLLERS:
+   [ ] daily_tasks_screen.dart - Use TasksController
+   [ ] progress_screen.dart - Use ProgressController
+   [ ] profile_screen.dart - Use ProfileController
+   [ ] community_screen.dart - Use CommunityController
+   [ ] reflection_screen.dart - Use ReflectionController
+   [ ] onboarding_screen.dart - Use OnboardingController (partially done)
+
+⏳ UPDATE IMPORTS IN MOVED FILES:
+   [ ] Update all screen files to use correct model imports
+   [ ] Update all screen files to use correct widget imports
+   [ ] Update all screen files to use correct service imports
+
+⏳ UPDATE MAIN.DART:
+   [x] Add HomeController to providers
+   [x] Add OnboardingController to providers
+   [ ] Add TasksController to providers
+   [ ] Add ProgressController to providers
+   [ ] Add ProfileController to providers
+   [ ] Add CommunityController to providers
+   [ ] Add ReflectionController to providers
+
+⏳ CLEANUP OLD FILES:
+   [ ] Remove lib/screens/onboarding/ directory (after verifying new location works)
+   [ ] Remove lib/screens/auth/ directory (after verifying new location works)
+   [ ] Remove old lib/screens/home_screen.dart (after verifying new location works)
+   [ ] Remove other moved screen files from lib/screens/
+
+⏳ UPDATE ROUTES:
+   [ ] Update all route definitions to use new paths
+   [ ] Update navigation calls throughout the app
+
+⏳ TESTING:
+   [ ] Test authentication flow
+   [ ] Test onboarding flow
+   [ ] Test home screen navigation
+   [ ] Test tasks feature
+   [ ] Test progress feature
+   [ ] Test profile feature
+   [ ] Test community feature
+   [ ] Test reflection feature
+
+================================================================================
+                          IMPORT PATH UPDATES NEEDED
+================================================================================
+
+FILES THAT NEED IMPORT UPDATES:
+
+1. lib/features/tasks/screens/daily_tasks_screen.dart
+   - Update habit_model import
+   - Update widget imports
+   - Add TasksController usage
+
+2. lib/features/tasks/screens/task_detail_screen.dart
+   - Update habit_model import
+   - Update widget imports
+
+3. lib/features/progress/screens/progress_screen.dart
+   - Add ProgressController usage
+
+4. lib/features/profile/screens/profile_screen.dart
+   - Update user_model import
+   - Add ProfileController usage
+   - Update sign_in_screen import
+
+5. lib/features/community/screens/community_screen.dart
+   - Add CommunityController usage
+
+6. lib/features/reflection/screens/reflection_screen.dart
+   - Update widget imports
+   - Add ReflectionController usage
+
+7. lib/features/home/screens/home_screen.dart
+   - Update screen imports to use new feature paths
+   - Update sign_in_screen import
+
+================================================================================
+                          VERIFICATION STEPS
+================================================================================
+
+After completing migration, verify:
+
+1. All imports resolve correctly
+2. No duplicate file definitions
+3. All controllers are properly provided in main.dart
+4. All screens can access their controllers via Provider
+5. Navigation works correctly
+6. No runtime errors
+7. All features function as expected
+
+================================================================================
+                          NOTES
+================================================================================
+
+- Keep old files until migration is fully verified
+- Test each feature independently after migration
+- Update documentation as files are moved
+- Commit changes incrementally for easier rollback if needed
+
+================================================================================
+
