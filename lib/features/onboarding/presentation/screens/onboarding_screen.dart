@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:provider/provider.dart';
-import '../../../../providers/language_provider.dart';
+import '../../../../l10n/app_localizations.dart';
 
 // Import all onboarding pages
 import 'onboarding_name.dart';
@@ -714,7 +713,7 @@ class _WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final lang = Provider.of<LanguageProvider>(context, listen: true);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0F),
@@ -758,7 +757,7 @@ class _WelcomeScreen extends StatelessWidget {
               // Welcome Title
               Center(
                 child: Text(
-                  lang.t('welcome'),
+                  l10n.welcome,
                   textAlign: TextAlign.center,
                   style: theme.textTheme.headlineMedium?.copyWith(
                     color: Colors.white,
@@ -773,7 +772,7 @@ class _WelcomeScreen extends StatelessWidget {
               // Welcome Message
               Center(
                 child: Text(
-                  lang.t('welcome_message'),
+                  l10n.welcomeMessage,
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyLarge?.copyWith(
                     color: Colors.grey.shade400,
@@ -799,7 +798,7 @@ class _WelcomeScreen extends StatelessWidget {
                     elevation: 0,
                   ),
                   child: Text(
-                    lang.t('get_started'),
+                    l10n.getStarted,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,

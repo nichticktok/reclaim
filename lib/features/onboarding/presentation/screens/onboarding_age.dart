@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../../../providers/language_provider.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../widgets/onboarding_header.dart';
 
 /// Reclaim — Onboarding Age Selector
@@ -22,26 +21,22 @@ class OnboardingAge extends StatefulWidget {
 class _OnboardingAgeState extends State<OnboardingAge> {
   String? selectedId;
 
-  // Stable IDs only. Labels come from LanguageProvider.
-  static const List<String> _ageOptionIds = <String>[
-    '13_17',
-    '18_24',
-    '25_34',
-    '35_44',
-    '45_54',
-    '55_plus',
-  ];
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final lang = Provider.of<LanguageProvider>(context, listen: true);
+    final l10n = AppLocalizations.of(context)!;
 
-    final String title = lang.t('onboarding_age.title');
+    final String title = l10n.onboardingAgeTitle;
     // Resolve localized labels from ids
-    final List<_AgeViewItem> items = _ageOptionIds
-        .map((id) => _AgeViewItem(id: id, label: lang.t('onboarding_age.$id')))
-        .toList();
+    final List<_AgeViewItem> items = [
+      _AgeViewItem(id: '13_17', label: l10n.onboardingAge13_17),
+      _AgeViewItem(id: '18_24', label: l10n.onboardingAge18_24),
+      _AgeViewItem(id: '25_34', label: l10n.onboardingAge25_34),
+      _AgeViewItem(id: '35_44', label: l10n.onboardingAge35_44),
+      _AgeViewItem(id: '45_54', label: l10n.onboardingAge45_54),
+      _AgeViewItem(id: '55_plus', label: l10n.onboardingAge55_plus),
+    ];
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0F),

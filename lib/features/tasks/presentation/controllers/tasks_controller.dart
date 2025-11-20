@@ -201,6 +201,63 @@ class TasksController extends ChangeNotifier {
     }
   }
 
+  /// Skip a task (only for system-assigned tasks, with consequences)
+  Future<void> skipHabit(HabitModel habit) async {
+    try {
+      // Only system-assigned tasks can be skipped
+      if (!habit.isSystemAssigned) {
+        throw Exception('Only system-assigned tasks can be skipped');
+      }
+
+      // Cannot skip if already completed
+      if (habit.isCompletedToday()) {
+        throw Exception('Cannot skip a completed task');
+      }
+
+      await _repository.skipHabit(habit.id);
+      habit.markSkippedToday();
+      
+      // Apply consequences - add a task for tomorrow
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await _applySkipConsequences(user.uid, habit);
+      }
+      
+      // Refresh habits
+      _habits = await _repository.getTodayHabits(user!.uid);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error skipping habit: $e');
+      rethrow;
+    }
+  }
+
+  /// Apply consequences for skipping a task - adds a task for tomorrow
+  Future<void> _applySkipConsequences(String userId, HabitModel skippedHabit) async {
+    try {
+      // Create a penalty task that's similar to the skipped task
+      // This task will appear in the user's list tomorrow
+      final penaltyTask = HabitModel(
+        id: '', // Will be set by Firestore
+        title: skippedHabit.title,
+        description: '${skippedHabit.description} (Penalty for skipping yesterday)',
+        scheduledTime: skippedHabit.scheduledTime,
+        requiresProof: skippedHabit.requiresProof,
+        isPreset: true,
+        isSystemAssigned: true,
+        difficulty: skippedHabit.difficulty,
+      );
+      
+      // Add the penalty task to Firestore
+      // It will automatically appear in tomorrow's task list
+      await _repository.addHabit(penaltyTask);
+      
+      debugPrint('⚠️ Skip consequence: Added penalty task "${penaltyTask.title}" for tomorrow');
+    } catch (e) {
+      debugPrint('Error applying skip consequences: $e');
+    }
+  }
+
   /// Check if proof is required for a habit
   bool isProofRequired(HabitModel habit) {
     return habit.isProofRequired(_hardModeEnabled ?? false);

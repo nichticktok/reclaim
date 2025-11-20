@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../models/user_model.dart';
+import '../../../../providers/language_provider.dart';
 import '../../../home/presentation/controllers/home_controller.dart';
 import '../../../auth/presentation/screens/sign_in_screen.dart';
 
@@ -96,6 +97,16 @@ class SettingsScreen extends StatelessWidget {
                         content: Text("Theme settings coming soon! 🎨"),
                         backgroundColor: Colors.orange,
                       ),
+                    );
+                  },
+                ),
+                Consumer<LanguageProvider>(
+                  builder: (context, langProvider, child) {
+                    return _buildSettingTile(
+                      icon: Icons.language,
+                      title: "Language",
+                      subtitle: LanguageProvider.getLanguageDisplayName(langProvider.locale.languageCode),
+                      onTap: () => _showLanguageSelector(context),
                     );
                   },
                 ),
@@ -265,6 +276,64 @@ class SettingsScreen extends StatelessWidget {
             : null,
         trailing: const Icon(Icons.chevron_right, color: Colors.white54),
         onTap: onTap,
+      ),
+    );
+  }
+
+  void _showLanguageSelector(BuildContext context) {
+    final langProvider = Provider.of<LanguageProvider>(context, listen: false);
+    final currentLocale = langProvider.locale;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A1A),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Select Language',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ...LanguageProvider.supportedLocales.map((locale) {
+              final isSelected = currentLocale.languageCode == locale.languageCode;
+              return ListTile(
+                title: Text(
+                  LanguageProvider.getLanguageDisplayName(locale.languageCode),
+                  style: const TextStyle(color: Colors.white),
+                ),
+                trailing: isSelected
+                    ? const Icon(Icons.check, color: Colors.orange)
+                    : null,
+                onTap: () async {
+                  await langProvider.setLanguage(locale);
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Language changed to ${LanguageProvider.getLanguageDisplayName(locale.languageCode)}',
+                        ),
+                        backgroundColor: Colors.green,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                },
+              );
+            }),
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }

@@ -1,7 +1,6 @@
 import 'dart:async';
-import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
-import '../../../../providers/language_provider.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Reclaim — Onboarding Awakening
 /// Step 9: Cinematic transitional screen with dramatic text
@@ -63,13 +62,12 @@ class _OnboardingAwakeningState extends State<OnboardingAwakening>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final lang = Provider.of<LanguageProvider>(context);
+    final l10n = AppLocalizations.of(context)!;
 
-    // Provide defaults if keys not present yet
-    final line1 = lang.t('awakening_line1'); // "You were just another face in"
-    final line2 = lang.t('awakening_line2'); // "the crowd."
-    final line3 = lang.t('awakening_line3'); // "Tired. Stuck. Running on\nautopilot... until now."
-    final skip  = lang.t('next');            // reuse "Next →" label for Skip/Continue
+    final line1 = l10n.awakeningLine1;
+    final line2 = l10n.awakeningLine2;
+    final line3 = l10n.awakeningLine3;
+    final skip = l10n.next;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0A),

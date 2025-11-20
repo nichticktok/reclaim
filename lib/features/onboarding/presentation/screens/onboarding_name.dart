@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
-import 'package:provider/provider.dart';
-import '../../../../providers/language_provider.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../widgets/onboarding_header.dart';
 
 /// Reclaim — Onboarding Name Input
@@ -59,7 +58,7 @@ class _OnboardingNameState extends State<OnboardingName> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final lang = Provider.of<LanguageProvider>(context, listen: true);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0F),
@@ -103,7 +102,7 @@ class _OnboardingNameState extends State<OnboardingName> {
 
               // Title
               Text(
-                lang.t('onboarding_name.title'),
+                l10n.onboardingNameTitle,
                 style: theme.textTheme.headlineSmall?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -124,7 +123,7 @@ class _OnboardingNameState extends State<OnboardingName> {
                   fontWeight: FontWeight.w500,
                 ),
                 decoration: InputDecoration(
-                  hintText: lang.t('onboarding_name.hint'),
+                  hintText: l10n.onboardingNameHint,
                   hintStyle: TextStyle(
                     color: Colors.grey.shade600,
                     fontSize: 18,
@@ -181,7 +180,7 @@ class _OnboardingNameState extends State<OnboardingName> {
                     elevation: 0,
                   ),
                   child: Text(
-                    lang.t('continue'),
+                    l10n.continueButton,
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,

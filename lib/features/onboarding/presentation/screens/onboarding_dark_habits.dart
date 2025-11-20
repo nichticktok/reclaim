@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../widgets/onboarding_header.dart';
-import '../../../../providers/language_provider.dart';
+import '../../../../l10n/app_localizations.dart';
+import '../../../../providers/language_provider.dart' show LangOption;
 
 /// Reclaim — Onboarding Dark Habits (Step 12)
 class OnboardingDarkHabits extends StatefulWidget {
@@ -35,11 +35,18 @@ class _OnboardingDarkHabitsState extends State<OnboardingDarkHabits> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final lang = Provider.of<LanguageProvider>(context, listen: true);
+    final l10n = AppLocalizations.of(context)!;
 
-    // 🔤 Localized title + options from LanguageProvider
-    final String title = lang.t('onboarding_dark.title');
-    final options = lang.options('onboarding_dark'); // List<LangOption>(id,label)
+    // 🔤 Localized title + options
+    final String title = l10n.onboardingDarkTitle;
+    final options = [
+      LangOption(id: 'procrastination', label: l10n.onboardingDarkProcrastination),
+      LangOption(id: 'overthinking', label: l10n.onboardingDarkOverthinking),
+      LangOption(id: 'negativity', label: l10n.onboardingDarkNegativity),
+      LangOption(id: 'addiction_phone_social', label: l10n.onboardingDarkAddictionPhoneSocial),
+      LangOption(id: 'lack_self_discipline', label: l10n.onboardingDarkLackSelfDiscipline),
+      LangOption(id: 'poor_sleep', label: l10n.onboardingDarkPoorSleep),
+    ];
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0F),

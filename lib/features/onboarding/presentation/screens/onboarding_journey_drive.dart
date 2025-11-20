@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../widgets/onboarding_header.dart';
-import '../../../../providers/language_provider.dart';
+import '../../../../l10n/app_localizations.dart';
+import '../../../../providers/language_provider.dart' show LangOption;
 
 /// Reclaim — Onboarding Journey Drive (Step 11)
 class OnboardingJourneyDrive extends StatefulWidget {
@@ -25,11 +25,17 @@ class _OnboardingJourneyDriveState extends State<OnboardingJourneyDrive> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final lang = Provider.of<LanguageProvider>(context, listen: true);
+    final l10n = AppLocalizations.of(context)!;
 
-    // 🔤 Localized title + options from LanguageProvider mapping
-    final String title = lang.t('onboarding_drive.title');
-    final options = lang.options('onboarding_drive'); // List<LangOption>(id,label)
+    // 🔤 Localized title + options
+    final String title = l10n.onboardingDriveTitle;
+    final options = [
+      LangOption(id: 'ambition', label: l10n.onboardingDriveAmbition),
+      LangOption(id: 'love', label: l10n.onboardingDriveLove),
+      LangOption(id: 'growth', label: l10n.onboardingDriveGrowth),
+      LangOption(id: 'peace', label: l10n.onboardingDrivePeace),
+      LangOption(id: 'curiosity', label: l10n.onboardingDriveCuriosity),
+    ];
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0F),

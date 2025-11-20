@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../widgets/onboarding_header.dart';
-import '../../../../providers/language_provider.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Reclaim — Onboarding Confirm Age (no asset images)
 /// Step 7: Shows name, gender (as icon + localized label), and a scrollable age picker.
@@ -57,7 +56,7 @@ class _OnboardingConfirmAgeState extends State<OnboardingConfirmAge> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final lang = Provider.of<LanguageProvider>(context, listen: true);
+    final l10n = AppLocalizations.of(context)!;
 
     // Normalize gender id (defensive)
     final genderId = (() {
@@ -69,8 +68,10 @@ class _OnboardingConfirmAgeState extends State<OnboardingConfirmAge> {
       // fallback
       return 'other';
     })();
-
-    final genderLabel = lang.t('onboarding_gender.$genderId');
+    final genderLabel = genderId == 'male' ? l10n.onboardingGenderMale
+        : genderId == 'female' ? l10n.onboardingGenderFemale
+        : genderId == 'other' ? l10n.onboardingGenderOther
+        : l10n.onboardingGenderPreferNot;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0A),
@@ -91,7 +92,7 @@ class _OnboardingConfirmAgeState extends State<OnboardingConfirmAge> {
               // --- Title (localized) ---
               Text(
                 // You can keep using 'howOld' or create a dedicated key like 'onboarding_confirm_age.title'
-                lang.t('howOld'),
+                l10n.howOld,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.headlineSmall?.copyWith(
                   color: Colors.white,
@@ -181,7 +182,7 @@ class _OnboardingConfirmAgeState extends State<OnboardingConfirmAge> {
                                 color: isSelected ? Colors.white : Colors.white54,
                                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w400,
                               ),
-                              child: Text(lang.n(age)), // ✅ localized digits
+                              child: Text(age.toString()), // ✅ localized digits
                             ),
                           );
                         },
@@ -210,7 +211,7 @@ class _OnboardingConfirmAgeState extends State<OnboardingConfirmAge> {
                     shadowColor: const Color(0xFFFF7A00).withValues(alpha: 0.4),
                   ),
                   child: Text(
-                    lang.t('confirm'), // ✅ localized
+                    l10n.confirm,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,

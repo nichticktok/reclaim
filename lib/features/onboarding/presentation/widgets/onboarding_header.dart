@@ -16,8 +16,9 @@ class OnboardingHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final lang = Provider.of<LanguageProvider>(context);
-    final currentLang = lang.currentLang;
+    final langProvider = Provider.of<LanguageProvider>(context);
+    final currentLocale = langProvider.locale;
+    final currentLangName = LanguageProvider.getLanguageDisplayName(currentLocale.languageCode);
 
     final inherited = InheritedOnboardingProgress.of(context);
     final rawProgress = inherited?.progress ?? 0.0;
@@ -81,18 +82,22 @@ class OnboardingHeader extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      ListTile(
-                        title: const Text('English', style: TextStyle(color: Colors.white)),
-                        trailing: currentLang == 'English'
-                            ? const Icon(Icons.check, color: Colors.orange) : null,
-                        onTap: () { lang.setLanguage('English'); Navigator.pop(context); },
-                      ),
-                      ListTile(
-                        title: const Text('Nepali', style: TextStyle(color: Colors.white)),
-                        trailing: currentLang == 'Nepali'
-                            ? const Icon(Icons.check, color: Colors.orange) : null,
-                        onTap: () { lang.setLanguage('Nepali'); Navigator.pop(context); },
-                      ),
+                      ...LanguageProvider.supportedLocales.map((locale) {
+                        final isSelected = currentLocale.languageCode == locale.languageCode;
+                        return ListTile(
+                          title: Text(
+                            LanguageProvider.getLanguageDisplayName(locale.languageCode),
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          trailing: isSelected
+                              ? const Icon(Icons.check, color: Colors.orange)
+                              : null,
+                          onTap: () async {
+                            await langProvider.setLanguage(locale);
+                            if (context.mounted) Navigator.pop(context);
+                          },
+                        );
+                      }),
                       const SizedBox(height: 20),
                     ],
                   ),
@@ -108,7 +113,7 @@ class OnboardingHeader extends StatelessWidget {
                   children: [
                     const Icon(Icons.language_rounded, color: Colors.white, size: 16),
                     const SizedBox(width: 6),
-                    Text(currentLang,
+                    Text(currentLangName,
                       style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                     const SizedBox(width: 4),
                     const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white, size: 18),

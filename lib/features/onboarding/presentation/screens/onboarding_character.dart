@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../widgets/onboarding_header.dart';
-import '../../../../providers/language_provider.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Reclaim — Onboarding Character Selection (No Images)
 class OnboardingCharacter extends StatefulWidget {
@@ -24,7 +23,7 @@ class _OnboardingCharacterState extends State<OnboardingCharacter> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final lang = Provider.of<LanguageProvider>(context);
+    final l10n = AppLocalizations.of(context)!;
     bool isSelected(String c) => selectedCharacter == c;
 
     return Scaffold(
@@ -45,7 +44,7 @@ class _OnboardingCharacterState extends State<OnboardingCharacter> {
 
               // --- Title ---
               Text(
-                lang.t('chooseCharacter'), // add this key in LanguageProvider
+                l10n.chooseCharacter,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.headlineSmall?.copyWith(
                   color: Colors.white,
@@ -60,13 +59,13 @@ class _OnboardingCharacterState extends State<OnboardingCharacter> {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   _buildCharacterOption(
-                    label: lang.t('female'), // "Female"
+                    label: l10n.female,
                     icon: Icons.female_rounded,
                     selected: isSelected("Female"),
                     onTap: () => setState(() => selectedCharacter = "Female"),
                   ),
                   _buildCharacterOption(
-                    label: lang.t('male'), // "Male"
+                    label: l10n.male,
                     icon: Icons.male_rounded,
                     selected: isSelected("Male"),
                     onTap: () => setState(() => selectedCharacter = "Male"),
@@ -95,7 +94,7 @@ class _OnboardingCharacterState extends State<OnboardingCharacter> {
                     shadowColor: const Color(0xFFFF7A00).withValues(alpha: 0.4),
                   ),
                   child: Text(
-                    lang.t('continue'), // add this key (e.g. "Continue")
+                    l10n.continueButton,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,

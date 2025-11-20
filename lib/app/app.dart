@@ -2,22 +2,37 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../features/onboarding/presentation/services/onboarding_service.dart';
 import '../features/home/presentation/screens/home_screen.dart';
 import '../features/auth/presentation/screens/sign_in_screen.dart';
 import '../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../features/tasks/presentation/screens/task_detail_screen.dart';
 import '../web/landing_page.dart';
+import '../providers/language_provider.dart';
 
 class ReclaimApp extends StatelessWidget {
   const ReclaimApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Reclaim',
-      debugShowCheckedModeBanner: false,
-      routes: {
+    return Consumer<LanguageProvider>(
+      builder: (context, languageProvider, child) {
+        return MaterialApp(
+          title: 'Reclaim',
+          debugShowCheckedModeBanner: false,
+          // Localization configuration
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: LanguageProvider.supportedLocales,
+          locale: languageProvider.locale,
+          routes: {
         '/onboarding_screen': (context) => const OnboardingScreen(),
         '/home_screen': (context) => HomeScreen(), // Remove const to ensure Provider context is available
         '/sign_in_screen': (context) => const SignInScreen(),
@@ -74,6 +89,8 @@ class ReclaimApp extends StatelessWidget {
                 );
               },
             ),
+        );
+      },
     );
   }
 }

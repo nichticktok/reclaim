@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import '../../../../models/habit_model.dart';
 import '../../domain/repositories/tasks_repository.dart';
 
@@ -35,80 +36,96 @@ class FirestoreTasksRepository implements TasksRepository {
       return; // User already has tasks, don't initialize
     }
 
-    final hardModeEnabled = onboardingData['hardModeEnabled'] as bool? ?? false;
-    final habitsData = onboardingData['habitsData'] as Map<String, dynamic>? ?? {};
-    final extraTasks = onboardingData['extraTasks'] as List<dynamic>? ?? [];
+    // Check if in debug mode (onboarding was skipped)
     
+    final hardModeEnabled = onboardingData['hardModeEnabled'] as bool? ?? false;
     final defaultTasks = <HabitModel>[];
 
-    // Create tasks based on onboarding habits data (mark as preset)
-    if (habitsData.containsKey('wake_up')) {
-      final wakeTime = habitsData['wake_up'] as String? ?? '7:00 AM';
-      defaultTasks.add(HabitModel(
-        id: '', // Will be set by Firestore
-        title: 'Wake up at $wakeTime',
-        description: 'Start your day with purpose',
-        scheduledTime: wakeTime,
-        requiresProof: hardModeEnabled, // Proof required if hard mode
-        isPreset: true, // Mark as preset task
-      ));
-    }
-
-    if (habitsData.containsKey('water')) {
-      final waterAmount = habitsData['water'] as String? ?? '2L';
-      defaultTasks.add(HabitModel(
-        id: '',
-        title: 'Drink $waterAmount of water',
-        description: 'Stay hydrated throughout the day',
-        scheduledTime: '8:00 AM',
-        requiresProof: false, // Water doesn't typically need proof
-        isPreset: true, // Mark as preset task
-      ));
-    }
-
-    if (habitsData.containsKey('exercise')) {
-      defaultTasks.add(HabitModel(
-        id: '',
-        title: 'Exercise',
-        description: 'Physical activity for health',
-        scheduledTime: '6:00 PM',
-        requiresProof: !hardModeEnabled, // Proof if NOT hard mode (hard mode will override)
-        isPreset: true, // Mark as preset task
-      ));
-    }
-
-    if (habitsData.containsKey('meditation')) {
-      defaultTasks.add(HabitModel(
-        id: '',
-        title: 'Meditate',
-        description: 'Mindfulness and mental clarity',
-        scheduledTime: '7:00 AM',
-        requiresProof: false,
-        isPreset: true, // Mark as preset task
-      ));
-    }
-
-    if (habitsData.containsKey('reading')) {
-      defaultTasks.add(HabitModel(
-        id: '',
-        title: 'Read',
-        description: 'Expand your knowledge',
-        scheduledTime: '9:00 PM',
-        requiresProof: !hardModeEnabled,
-        isPreset: true, // Mark as preset task
-      ));
-    }
-
-    // Add extra tasks from onboarding (these are user-added, not preset)
-    for (var taskName in extraTasks) {
-      defaultTasks.add(HabitModel(
-        id: '',
-        title: taskName.toString(),
-        description: 'Custom task from onboarding',
-        scheduledTime: '12:00 PM',
-        requiresProof: hardModeEnabled,
-        isPreset: false, // User-added task, can be deleted
-      ));
+    // DEBUG MODE: Create 5 default tasks (3 without proof, 2 with proof)
+    // This happens when onboarding is skipped in debug mode
+    if (kDebugMode && (onboardingData.isEmpty || !onboardingData.containsKey('habitsData'))) {
+      defaultTasks.addAll([
+        HabitModel(
+          id: '',
+          title: 'Wake up at 7:00 AM',
+          description: 'Start your day with purpose',
+          scheduledTime: '7:00 AM',
+          requiresProof: false,
+          isPreset: true,
+          isSystemAssigned: true,
+          difficulty: 'easy',
+        ),
+        HabitModel(
+          id: '',
+          title: 'Drink 2L of water',
+          description: 'Stay hydrated throughout the day',
+          scheduledTime: '8:00 AM',
+          requiresProof: false,
+          isPreset: true,
+          isSystemAssigned: true,
+          difficulty: 'easy',
+        ),
+        HabitModel(
+          id: '',
+          title: 'Read for 30 minutes',
+          description: 'Expand your knowledge',
+          scheduledTime: '9:00 PM',
+          requiresProof: false,
+          isPreset: true,
+          isSystemAssigned: true,
+          difficulty: 'medium',
+        ),
+        HabitModel(
+          id: '',
+          title: 'Exercise for 30 minutes',
+          description: 'Physical activity for health',
+          scheduledTime: '6:00 PM',
+          requiresProof: true,
+          isPreset: true,
+          isSystemAssigned: true,
+          difficulty: 'medium',
+        ),
+        HabitModel(
+          id: '',
+          title: 'Meditate for 15 minutes',
+          description: 'Mindfulness and mental clarity',
+          scheduledTime: '7:00 AM',
+          requiresProof: true,
+          isPreset: true,
+          isSystemAssigned: true,
+          difficulty: 'hard',
+        ),
+      ]);
+    } else {
+      // NORMAL MODE: Create 5 tasks based on onboarding data (2 easy, 2 medium, 1 hard)
+      final habitsData = onboardingData['habitsData'] as Map<String, dynamic>? ?? {};
+      final commitmentLevel = onboardingData['commitmentLevel'] as String? ?? '50';
+      final commitment = int.tryParse(commitmentLevel) ?? 50;
+      
+      // Determine task difficulty based on commitment level and onboarding answers
+      // Higher commitment = more challenging tasks
+      final taskPool = _generateTaskPool(habitsData, commitment, hardModeEnabled);
+      
+      // Select 5 tasks: 2 easy, 2 medium, 1 hard
+      final easyTasks = taskPool.where((t) => t.difficulty == 'easy').take(2).toList();
+      final mediumTasks = taskPool.where((t) => t.difficulty == 'medium').take(2).toList();
+      final hardTasks = taskPool.where((t) => t.difficulty == 'hard').take(1).toList();
+      
+      defaultTasks.addAll([...easyTasks, ...mediumTasks, ...hardTasks]);
+      
+      // If we don't have enough tasks, fill with defaults
+      while (defaultTasks.length < 5) {
+        defaultTasks.add(HabitModel(
+          id: '',
+          title: 'Complete daily task',
+          description: 'Stay consistent with your goals',
+          scheduledTime: '12:00 PM',
+          requiresProof: hardModeEnabled,
+          isPreset: true,
+          isSystemAssigned: true,
+          difficulty: defaultTasks.length < 2 ? 'easy' : defaultTasks.length < 4 ? 'medium' : 'hard',
+        ));
+      }
     }
 
     // Apply hard mode: if enabled, all tasks require proof
@@ -129,6 +146,166 @@ class FirestoreTasksRepository implements TasksRepository {
       batch.set(docRef, task.toMap());
     }
     await batch.commit();
+  }
+
+  /// Generate a pool of tasks based on onboarding data and commitment level
+  List<HabitModel> _generateTaskPool(Map<String, dynamic> habitsData, int commitment, bool hardModeEnabled) {
+    final tasks = <HabitModel>[];
+    
+    // Easy tasks (low commitment threshold)
+    if (habitsData.containsKey('wake_up')) {
+      final wakeTime = habitsData['wake_up'] as String? ?? '7:00 AM';
+      tasks.add(HabitModel(
+        id: '',
+        title: 'Wake up at $wakeTime',
+        description: 'Start your day with purpose',
+        scheduledTime: wakeTime,
+        requiresProof: false,
+        isPreset: true,
+        isSystemAssigned: true,
+        difficulty: 'easy',
+      ));
+    }
+    
+    if (habitsData.containsKey('water')) {
+      final waterAmount = habitsData['water'] as String? ?? '2L';
+      tasks.add(HabitModel(
+        id: '',
+        title: 'Drink $waterAmount of water',
+        description: 'Stay hydrated throughout the day',
+        scheduledTime: '8:00 AM',
+        requiresProof: false,
+        isPreset: true,
+        isSystemAssigned: true,
+        difficulty: 'easy',
+      ));
+    }
+    
+    // Medium tasks (moderate commitment)
+    if (habitsData.containsKey('reading')) {
+      tasks.add(HabitModel(
+        id: '',
+        title: 'Read for 30 minutes',
+        description: 'Expand your knowledge',
+        scheduledTime: '9:00 PM',
+        requiresProof: commitment > 60,
+        isPreset: true,
+        isSystemAssigned: true,
+        difficulty: 'medium',
+      ));
+    }
+    
+    if (habitsData.containsKey('exercise')) {
+      tasks.add(HabitModel(
+        id: '',
+        title: 'Exercise for 30 minutes',
+        description: 'Physical activity for health',
+        scheduledTime: '6:00 PM',
+        requiresProof: commitment > 50,
+        isPreset: true,
+        isSystemAssigned: true,
+        difficulty: 'medium',
+      ));
+    }
+    
+    // Hard tasks (high commitment)
+    if (habitsData.containsKey('meditation')) {
+      tasks.add(HabitModel(
+        id: '',
+        title: 'Meditate for 15 minutes',
+        description: 'Mindfulness and mental clarity',
+        scheduledTime: '7:00 AM',
+        requiresProof: commitment > 40,
+        isPreset: true,
+        isSystemAssigned: true,
+        difficulty: 'hard',
+      ));
+    }
+    
+    // Add more tasks based on commitment level
+    if (commitment > 70) {
+      tasks.add(HabitModel(
+        id: '',
+        title: 'Cold shower',
+        description: 'Build mental resilience',
+        scheduledTime: '6:30 AM',
+        requiresProof: true,
+        isPreset: true,
+        isSystemAssigned: true,
+        difficulty: 'hard',
+      ));
+    }
+    
+    if (commitment > 60) {
+      tasks.add(HabitModel(
+        id: '',
+        title: 'Journal for 10 minutes',
+        description: 'Reflect on your day',
+        scheduledTime: '10:00 PM',
+        requiresProof: false,
+        isPreset: true,
+        isSystemAssigned: true,
+        difficulty: 'medium',
+      ));
+    }
+    
+    // Ensure we have at least some tasks
+    if (tasks.isEmpty) {
+      tasks.addAll([
+        HabitModel(
+          id: '',
+          title: 'Wake up at 7:00 AM',
+          description: 'Start your day with purpose',
+          scheduledTime: '7:00 AM',
+          requiresProof: false,
+          isPreset: true,
+          isSystemAssigned: true,
+          difficulty: 'easy',
+        ),
+        HabitModel(
+          id: '',
+          title: 'Drink 2L of water',
+          description: 'Stay hydrated',
+          scheduledTime: '8:00 AM',
+          requiresProof: false,
+          isPreset: true,
+          isSystemAssigned: true,
+          difficulty: 'easy',
+        ),
+        HabitModel(
+          id: '',
+          title: 'Exercise',
+          description: 'Physical activity',
+          scheduledTime: '6:00 PM',
+          requiresProof: hardModeEnabled,
+          isPreset: true,
+          isSystemAssigned: true,
+          difficulty: 'medium',
+        ),
+        HabitModel(
+          id: '',
+          title: 'Read',
+          description: 'Expand knowledge',
+          scheduledTime: '9:00 PM',
+          requiresProof: hardModeEnabled,
+          isPreset: true,
+          isSystemAssigned: true,
+          difficulty: 'medium',
+        ),
+        HabitModel(
+          id: '',
+          title: 'Meditate',
+          description: 'Mindfulness practice',
+          scheduledTime: '7:00 AM',
+          requiresProof: hardModeEnabled,
+          isPreset: true,
+          isSystemAssigned: true,
+          difficulty: 'hard',
+        ),
+      ]);
+    }
+    
+    return tasks;
   }
 
   @override
@@ -223,6 +400,7 @@ class FirestoreTasksRepository implements TasksRepository {
       'completed': true,
       'lastCompletedAt': FieldValue.serverTimestamp(),
       'dailyCompletion.$today': true,
+      'dailySkipped.$today': false, // Clear skip if completing
     };
 
     if (proof != null) {
@@ -235,6 +413,23 @@ class FirestoreTasksRepository implements TasksRepository {
         .collection('habits')
         .doc(habitId)
         .update(updates);
+  }
+
+  @override
+  Future<void> skipHabit(String habitId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception('No authenticated user');
+
+    final today = _getTodayDateString();
+    await _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('habits')
+        .doc(habitId)
+        .update({
+      'dailySkipped.$today': true,
+      'dailyCompletion.$today': false, // Clear completion if skipping
+    });
   }
 
   /// Get today's date string (YYYY-MM-DD)
@@ -257,12 +452,14 @@ class FirestoreTasksRepository implements TasksRepository {
     return snapshot.docs.map((doc) {
       final data = doc.data();
       final dailyCompletion = data['dailyCompletion'] as Map<String, dynamic>? ?? {};
+      final dailySkipped = data['dailySkipped'] as Map<String, dynamic>? ?? {};
       final isCompletedToday = dailyCompletion[today] == true;
       
       return HabitModel.fromMap({
         ...data,
         'id': doc.id,
         'completed': isCompletedToday, // Set completed based on today's status
+        'dailySkipped': dailySkipped, // Include skipped status
       });
     }).toList();
   }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../widgets/onboarding_header.dart';
-import '../../../../providers/language_provider.dart';
+import '../../../../l10n/app_localizations.dart';
+import '../../../../providers/language_provider.dart' show LangOption;
 
 /// Reclaim — Onboarding Life Description (Step 5)
 class OnboardingLifeDescription extends StatefulWidget {
@@ -26,11 +26,17 @@ class _OnboardingLifeDescriptionState extends State<OnboardingLifeDescription> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final lang = Provider.of<LanguageProvider>(context, listen: true);
+    final l10n = AppLocalizations.of(context)!;
 
-    // 🔤 Localized title + options from LanguageProvider
-    final String title = lang.t('onboarding_life.title');
-    final options = lang.options('onboarding_life'); // List<LangOption>(id,label)
+    // 🔤 Localized title + options
+    final String title = l10n.onboardingLifeTitle;
+    final options = [
+      LangOption(id: 'life_satisfied', label: l10n.onboardingLifeSatisfied),
+      LangOption(id: 'life_self_improve', label: l10n.onboardingLifeSelfImprove),
+      LangOption(id: 'life_okay_neutral', label: l10n.onboardingLifeOkayNeutral),
+      LangOption(id: 'life_often_sad', label: l10n.onboardingLifeOftenSad),
+      LangOption(id: 'life_lowest_need_help', label: l10n.onboardingLifeLowestNeedHelp),
+    ];
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0F),

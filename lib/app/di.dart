@@ -19,7 +19,7 @@ class AppProviders {
   static List<ChangeNotifierProvider> get providers => [
         // Global Providers
         ChangeNotifierProvider<LanguageProvider>(
-          create: (_) => LanguageProvider(),
+          create: (_) => LanguageProvider()..initialize(),
           lazy: false,
         ),
         

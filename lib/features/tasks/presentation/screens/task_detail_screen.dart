@@ -228,8 +228,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
     final controller = context.read<TasksController>();
     final isCompleted = _habit!.isCompletedToday();
+    final isSkipped = _habit!.isSkippedToday();
     final proofRequired = controller.isProofRequired(_habit!);
     final todayProof = _habit!.getTodayProof();
+    final canSkip = _habit!.isSystemAssigned && !isCompleted && !isSkipped;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0F),
@@ -311,10 +313,18 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: isCompleted ? Colors.green.withValues(alpha: 0.1) : const Color(0xFF1A1A1A),
+                color: isSkipped 
+                    ? Colors.orange.withValues(alpha: 0.1)
+                    : isCompleted 
+                        ? Colors.green.withValues(alpha: 0.1) 
+                        : const Color(0xFF1A1A1A),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: isCompleted ? Colors.green : Colors.white.withValues(alpha: 0.1),
+                  color: isSkipped
+                      ? Colors.orange
+                      : isCompleted 
+                          ? Colors.green 
+                          : Colors.white.withValues(alpha: 0.1),
                   width: 2,
                 ),
               ),
@@ -324,17 +334,33 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                   Row(
                     children: [
                       Icon(
-                        isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
-                        color: isCompleted ? Colors.green : Colors.white54,
+                        isSkipped
+                            ? Icons.skip_next
+                            : isCompleted 
+                                ? Icons.check_circle 
+                                : Icons.radio_button_unchecked,
+                        color: isSkipped
+                            ? Colors.orange
+                            : isCompleted 
+                                ? Colors.green 
+                                : Colors.white54,
                         size: 28,
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        isCompleted ? "Task Completed" : "Task Pending",
+                        isSkipped
+                            ? "Task Skipped"
+                            : isCompleted 
+                                ? "Task Completed" 
+                                : "Task Pending",
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
-                          color: isCompleted ? Colors.green : Colors.white,
+                          color: isSkipped
+                              ? Colors.orange
+                              : isCompleted 
+                                  ? Colors.green 
+                                  : Colors.white,
                         ),
                       ),
                     ],
@@ -401,11 +427,62 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
             const SizedBox(height: 20),
 
+            // Skip Button (only for system-assigned tasks)
+            if (canSkip) ...[
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _isLoading ? null : () => _handleSkipTask(controller),
+                  icon: const Icon(Icons.skip_next, color: Colors.orange),
+                  label: const Text(
+                    "Skip Task",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.orange,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.orange, width: 2),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "Skipping this task will add it back to your list tomorrow",
+                        style: const TextStyle(
+                          color: Colors.orange,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+
             // Complete/Incomplete Button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _isLoading ? null : () => _handleToggleCompletion(controller),
+                onPressed: _isLoading || isSkipped ? null : () => _handleToggleCompletion(controller),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isCompleted ? Colors.orange : Colors.green,
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -420,7 +497,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       )
                     : Text(
-                        isCompleted ? "Mark as Incomplete" : "Mark as Complete",
+                        isSkipped 
+                            ? "Task Skipped" 
+                            : isCompleted 
+                                ? "Mark as Incomplete" 
+                                : "Mark as Complete",
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -433,6 +514,76 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _handleSkipTask(TasksController controller) async {
+    if (_isLoading || _habit == null) return;
+
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange),
+            SizedBox(width: 8),
+            Text(
+              "Skip Task?",
+              style: TextStyle(color: Colors.white),
+            ),
+          ],
+        ),
+        content: Text(
+          "Skipping this task will add it back to your list tomorrow as a penalty task.\n\nAre you sure you want to skip?",
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            child: const Text('Skip'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      await controller.skipHabit(_habit!);
+      await _loadHabitData();
+      if (!mounted) return;
+      
+      Navigator.pop(context);
+      
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                "Task skipped. This task will be added back to your list tomorrow ⚠️",
+              ),
+              backgroundColor: Colors.orange,
+            ),
+          );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error: ${e.toString()}"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   Future<void> _handleToggleCompletion(TasksController controller) async {

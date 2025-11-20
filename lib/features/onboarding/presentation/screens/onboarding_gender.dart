@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../widgets/onboarding_header.dart';
-import '../../../../providers/language_provider.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Reclaim — Onboarding Gender Selector (Step 4)
 class OnboardingGender extends StatefulWidget {
@@ -22,24 +21,20 @@ class OnboardingGender extends StatefulWidget {
 class _OnboardingGenderState extends State<OnboardingGender> {
   String? selectedId;
 
-  // Stable option ids in desired UI order
-  static const List<String> _optionIds = <String>[
-    'male',
-    'female',
-    'other',
-    'prefer_not',
-  ];
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final lang = Provider.of<LanguageProvider>(context, listen: true);
+    final l10n = AppLocalizations.of(context)!;
 
-    // Localized title and option labels from LanguageProvider
-    final String title = lang.t('onboarding_gender.title');
-    final items = _optionIds
-        .map((id) => _GenderItem(id: id, label: lang.t('onboarding_gender.$id')))
-        .toList();
+    // Localized title and option labels
+    final String title = l10n.onboardingGenderTitle;
+    final items = [
+      _GenderItem(id: 'male', label: l10n.onboardingGenderMale),
+      _GenderItem(id: 'female', label: l10n.onboardingGenderFemale),
+      _GenderItem(id: 'other', label: l10n.onboardingGenderOther),
+      _GenderItem(id: 'prefer_not', label: l10n.onboardingGenderPreferNot),
+    ];
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0F),

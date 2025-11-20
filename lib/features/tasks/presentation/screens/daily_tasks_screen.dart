@@ -84,9 +84,9 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
           }
           
           // Filter habits based on selected filter (To-dos, Done, Skipped)
-          final todos = allHabits.where((h) => !h.isCompletedToday()).toList();
+          final todos = allHabits.where((h) => !h.isCompletedToday() && !h.isSkippedToday()).toList();
           final done = allHabits.where((h) => h.isCompletedToday()).toList();
-          final skipped = <HabitModel>[]; // Skipped tasks feature not yet implemented
+          final skipped = allHabits.where((h) => h.isSkippedToday()).toList();
           
           final displayHabits = _selectedFilter == "To-dos" 
               ? todos 

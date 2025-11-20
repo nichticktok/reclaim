@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../widgets/onboarding_header.dart';
-import '../../../../providers/language_provider.dart';
+import '../../../../l10n/app_localizations.dart';
+import '../../../../providers/language_provider.dart' show LangOption;
 
 /// Reclaim — Onboarding Main Character Screen (Step 10)
 class OnboardingMainCharacter extends StatefulWidget {
@@ -26,11 +26,16 @@ class _OnboardingMainCharacterState extends State<OnboardingMainCharacter> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final lang = Provider.of<LanguageProvider>(context, listen: true);
+    final l10n = AppLocalizations.of(context)!;
 
-    // 🔤 Localized title + options from LanguageProvider mapping
-    final String title = lang.t('onboarding_main.title');
-    final options = lang.options('onboarding_main'); // List<LangOption> (id, label)
+    // 🔤 Localized title + options
+    final String title = l10n.onboardingMainTitle;
+    final options = [
+      LangOption(id: 'main_today', label: l10n.onboardingMainToday),
+      LangOption(id: 'main_week', label: l10n.onboardingMainWeek),
+      LangOption(id: 'main_months', label: l10n.onboardingMainMonths),
+      LangOption(id: 'main_cant_remember', label: l10n.onboardingMainCantRemember),
+    ];
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0F),
