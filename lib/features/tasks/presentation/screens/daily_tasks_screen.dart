@@ -8,7 +8,7 @@ import '../../../milestone/presentation/controllers/milestone_controller.dart';
 import '../../../achievements/presentation/controllers/achievements_controller.dart';
 import '../../../achievements/presentation/screens/achievements_screen.dart';
 import '../../../streaks/presentation/screens/streaks_screen.dart';
-import '../../../progress/presentation/screens/today_progress_screen.dart';
+import '../../../rating/presentation/screens/rating_screen.dart';
 import '../../../profile/presentation/screens/settings_screen.dart';
 import 'select_preset_task_screen.dart';
 
@@ -356,7 +356,6 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
     return Consumer3<ProgressController, MilestoneController, AchievementsController>(
       builder: (context, progressController, milestoneController, achievementsController, child) {
         final journeyController = context.read<JourneyController>();
-        final currentStreak = progressController.currentStreak;
         final currentDay = journeyController.currentDay;
         final overallProgress = progressController.overallProgress;
         final totalDays = milestoneController.getTotalDays();
@@ -364,6 +363,21 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
         // Get real achievements count
         final achievementsCount = achievementsController.unlockedCount;
         final successRate = (overallProgress * 100).toInt();
+
+        // Calculate current streak and today's task completion
+        final streakInfo = _calculateCurrentStreak(controller.habits);
+        final currentStreak = streakInfo['streak'] as int;
+        final todayTasksCompleted = streakInfo['todayTasksCompleted'] as int;
+        
+        // Determine color based on today's task completion
+        Color streakColor = Colors.grey;
+        if (todayTasksCompleted >= 7) {
+          streakColor = Colors.red;
+        } else if (todayTasksCompleted >= 6) {
+          streakColor = Colors.orange;
+        } else if (todayTasksCompleted >= 5) {
+          streakColor = Colors.green;
+        }
 
         return Container(
           color: const Color(0xFF0D0D0F),
@@ -392,7 +406,7 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
                             child: _buildStatButton(
                               icon: Icons.local_fire_department,
                               value: currentStreak.toString(),
-                              color: Colors.orange,
+                              color: streakColor,
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -417,7 +431,7 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => const TodayProgressScreen(),
+                                  builder: (context) => const RatingScreen(),
                                 ),
                               );
                             },
@@ -804,5 +818,63 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
     );
   }
 
+  /// Calculate current streak (consecutive days with at least 5 tasks completed)
+  /// Shows streak from yesterday if today hasn't been completed yet
+  Map<String, dynamic> _calculateCurrentStreak(List<HabitModel> habits) {
+    if (habits.isEmpty) {
+      return {'streak': 0, 'todayTasksCompleted': 0};
+    }
+
+    final today = DateTime.now();
+    final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+
+    // Count today's completed tasks
+    int todayTasksCompleted = 0;
+    for (var habit in habits) {
+      if (habit.dailyCompletion[todayStr] == true) {
+        todayTasksCompleted++;
+      }
+    }
+
+    // Start checking from yesterday if today has less than 5 tasks
+    // Otherwise start from today
+    DateTime checkDate;
+    bool includeToday = todayTasksCompleted >= 5;
+    
+    if (includeToday) {
+      checkDate = today;
+    } else {
+      // Start from yesterday to show streak from previous days
+      checkDate = today.subtract(const Duration(days: 1));
+    }
+
+    int streak = 0;
+    
+    // Count consecutive days with at least 5 tasks completed
+    while (true) {
+      final dateStr =
+          '${checkDate.year}-${checkDate.month.toString().padLeft(2, '0')}-${checkDate.day.toString().padLeft(2, '0')}';
+
+      int tasksCompleted = 0;
+      for (var habit in habits) {
+        if (habit.dailyCompletion[dateStr] == true) {
+          tasksCompleted++;
+        }
+      }
+
+      // Need at least 5 tasks completed to count as a streak day
+      if (tasksCompleted >= 5) {
+        streak++;
+        checkDate = checkDate.subtract(const Duration(days: 1));
+      } else {
+        break;
+      }
+    }
+
+    return {
+      'streak': streak,
+      'todayTasksCompleted': todayTasksCompleted,
+    };
+  }
 
 }
