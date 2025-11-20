@@ -345,15 +345,13 @@ class TasksController extends ChangeNotifier {
   Future<void> undoCompleteHabit(HabitModel habit) async {
     try {
       await _repository.undoCompleteHabit(habit.id);
-      // Update local state
-      final today = HabitModel.getTodayDateString();
-      habit.dailyCompletion.remove(today);
-      habit.proofs.remove(today);
-      habit.completed = false;
       
-      // Update stats
+      // Refresh habits to get updated completion status
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
+        _habits = await _repository.getTodayHabits(user.uid);
+        
+        // Update stats
         await _statsRepository.decrementTasksCompleted(user.uid);
         await _updateProgressStats(user.uid);
       }

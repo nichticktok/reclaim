@@ -64,38 +64,45 @@ class FirestoreJourneyRepository implements JourneyRepository {
   @override
   Future<int> getCurrentDay(String userId) async {
     try {
-      // Get program start date
-      final programDoc = await _firestore
+      // Get milestone start date (preferred) or fallback to program
+      final milestoneDoc = await _firestore
           .collection('users')
           .doc(userId)
-          .collection('programs')
+          .collection('milestones')
           .doc('current')
           .get();
 
-      if (!programDoc.exists) {
-        return 1; // Default to day 1 if no program
+      DateTime? startDate;
+      int? totalDays;
+
+      if (milestoneDoc.exists) {
+        final milestoneData = milestoneDoc.data();
+        startDate = (milestoneData?['startDate'] as Timestamp?)?.toDate();
+        totalDays = milestoneData?['totalDays'] as int?;
+      } else {
+        // Fallback to program start date
+        final programDoc = await _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('programs')
+            .doc('current')
+            .get();
+
+        if (programDoc.exists) {
+          final data = programDoc.data();
+          startDate = (data?['startDate'] as Timestamp?)?.toDate();
+          totalDays = data?['totalDays'] as int?;
+        }
       }
 
-      final data = programDoc.data();
-      final startDate = (data?['startDate'] as Timestamp?)?.toDate();
-      
       if (startDate == null) {
-        return 1;
+        return 1; // Default to day 1
       }
 
       final now = DateTime.now();
       final difference = now.difference(startDate).inDays;
-      final currentDay = (difference + 1).clamp(1, 66); // Clamp between 1 and 66
-
-      // Update current day in program
-      await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('programs')
-          .doc('current')
-          .update({
-        'currentDay': currentDay,
-      });
+      final maxDays = totalDays ?? 30; // Default to 30 days if not specified
+      final currentDay = (difference + 1).clamp(1, maxDays);
 
       return currentDay;
     } catch (e) {

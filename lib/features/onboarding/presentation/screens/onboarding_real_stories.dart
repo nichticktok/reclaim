@@ -42,7 +42,7 @@ class OnboardingRealStories extends StatelessWidget {
               Expanded(
                 child: ListView(
                   children: [
-                    _buildStoryCard('Alex M.', 'Transformed my life in 66 days!'),
+                    _buildStoryCard('Alex M.', 'Transformed my life!'),
                     _buildStoryCard('Sarah K.', 'Best decision I ever made.'),
                     _buildStoryCard('Mike T.', 'From zero to hero.'),
                   ],

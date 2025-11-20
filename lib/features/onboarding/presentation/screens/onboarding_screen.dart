@@ -26,7 +26,7 @@ import 'onboarding_program_overview.dart';
 import 'onboarding_program_preview.dart';
 import 'onboarding_program_customization.dart';
 import 'onboarding_science_backed.dart';
-import 'onboarding_66_days_explanation.dart';
+import 'onboarding_milestone_selection.dart';
 import 'onboarding_progressive_difficulty.dart';
 import 'onboarding_core_habits.dart';
 import 'onboarding_habit_detail.dart';
@@ -87,6 +87,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   List<String>? extraTasks;
   String? referCode;
   Map<String, bool>? vowAnswers;
+  int? milestoneDays; // User-selected milestone duration
+  String? milestoneName; // e.g., "1 Month", "2 Months"
 
   final _firestore = FirebaseFirestore.instance;
   final _auth = FirebaseAuth.instance;
@@ -154,6 +156,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       if (hardModeEnabled != null) 'hardModeEnabled': hardModeEnabled,
       if (notificationSettings != null) 'notificationSettings': notificationSettings,
       if (extraTasks != null) 'extraTasks': extraTasks,
+      if (milestoneDays != null) 'milestoneDays': milestoneDays,
+      if (milestoneName != null) 'milestoneName': milestoneName,
       
       // Additional
       if (referCode != null) 'referCode': referCode,
@@ -219,6 +223,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       if (hardModeEnabled != null) 'hardModeEnabled': hardModeEnabled,
       if (notificationSettings != null) 'notificationSettings': notificationSettings,
       if (extraTasks != null) 'extraTasks': extraTasks,
+      if (milestoneDays != null) 'milestoneDays': milestoneDays,
+      if (milestoneName != null) 'milestoneName': milestoneName,
       
       // Additional
       if (referCode != null) 'referCode': referCode,
@@ -245,6 +251,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       'onboardingStep': _currentStep,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+
+    // Initialize milestone if milestoneDays is set
+    if (milestoneDays != null && milestoneName != null) {
+      final startDate = DateTime.now();
+      final milestoneData = {
+        'id': 'current',
+        'userId': user.uid,
+        'totalDays': milestoneDays,
+        'name': milestoneName,
+        'startDate': Timestamp.fromDate(startDate),
+        'isActive': true,
+        'createdAt': Timestamp.fromDate(startDate),
+      };
+      
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('milestones')
+          .doc('current')
+          .set(milestoneData);
+    }
   }
 
   /// ✅ Move forward
@@ -538,10 +565,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           onNext: nextStep,
         ),
         
-        // 31. 66 Days Explanation
-        Onboarding66DaysExplanation(
+        // 31. Milestone Selection
+        OnboardingMilestoneSelection(
+          onNext: (days, name) {
+            milestoneDays = days;
+            milestoneName = name;
+            nextStep();
+          },
           onBack: prevStep,
-          onNext: nextStep,
         ),
         
         // 32. Progressive Difficulty

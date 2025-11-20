@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../controllers/journey_controller.dart';
+import '../../../milestone/presentation/controllers/milestone_controller.dart';
 
 /// Daily Journey Screen
 /// Shows: Day number, mood selection, tasks, journal entry
@@ -47,11 +48,14 @@ class _DailyJourneyScreenState extends State<DailyJourneyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final milestoneController = context.watch<MilestoneController>();
+    final totalDays = milestoneController.getTotalDays();
+    
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0F),
       appBar: AppBar(
         title: Text(
-          "Day ${widget.dayNumber}/66",
+          "Day ${widget.dayNumber}/$totalDays",
           style: const TextStyle(color: Colors.white),
         ),
         centerTitle: true,

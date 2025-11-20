@@ -30,7 +30,7 @@ class OnboardingProgramOverview extends StatelessWidget {
               ),
               const SizedBox(height: 48),
               const Text(
-                'Your next 66 days',
+                'Your journey ahead',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 24,
@@ -39,7 +39,7 @@ class OnboardingProgramOverview extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
-              // 66-day calendar visualization
+              // Program calendar visualization
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(
@@ -55,7 +55,7 @@ class OnboardingProgramOverview extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              '66 Days Program',
+                              'Your Program',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 18,
@@ -73,7 +73,7 @@ class OnboardingProgramOverview extends StatelessWidget {
                                 mainAxisSpacing: 8,
                                 childAspectRatio: 1.2,
                               ),
-                              itemCount: 10, // 10 weeks (66 days ≈ 9.4 weeks, show 10)
+                              itemCount: 10, // 10 weeks visualization
                               itemBuilder: (context, index) {
                                 final weekNum = index + 1;
                                 return Container(

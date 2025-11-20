@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../models/habit_model.dart';
 import '../controllers/tasks_controller.dart';
+import '../../../progress/presentation/controllers/progress_controller.dart';
+import '../../../achievements/presentation/controllers/achievements_controller.dart';
 
 class TaskDetailScreen extends StatefulWidget {
   const TaskDetailScreen({super.key});
@@ -559,6 +561,13 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     try {
       await controller.skipHabit(_habit!);
       await _loadHabitData();
+      
+      // Refresh progress controller to update stats immediately (using current tasks)
+      if (mounted) {
+        final tasksController = context.read<TasksController>();
+        await context.read<ProgressController>().refresh(currentTasks: tasksController.habits);
+      }
+      
       if (!mounted) return;
       
       Navigator.pop(context);
@@ -608,7 +617,18 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           // Undo completion
           await controller.undoCompleteHabit(_habit!);
           await _loadHabitData();
+          
+          // Refresh progress controller to update stats immediately (using current tasks)
+          if (mounted) {
+            final tasksController = context.read<TasksController>();
+            await context.read<ProgressController>().refresh(currentTasks: tasksController.habits);
+          }
+          
           if (!mounted) return;
+          
+          // Navigate back to tasks screen so user sees the task moved to "To-dos"
+          Navigator.pop(context);
+          
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text("Task marked as incomplete"),
@@ -628,6 +648,20 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           
           // Reload habit data to get updated completion status
           await _loadHabitData();
+          
+          // Check for achievements (use fresh habit data from database)
+          if (mounted) {
+            final achievementsController = context.read<AchievementsController>();
+            final freshHabit = await controller.getHabitById(_habit!.id);
+            await achievementsController.checkAchievementsOnTaskCompletion(freshHabit);
+          }
+          
+          // Refresh progress controller to update stats immediately (using current tasks)
+          if (mounted) {
+            final tasksController = context.read<TasksController>();
+            await context.read<ProgressController>().refresh(currentTasks: tasksController.habits);
+          }
+          
           if (!mounted) return;
           
           // Navigate back to tasks screen so user sees the task moved to "Done"
@@ -740,6 +774,18 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 Navigator.pop(context); // Close dialog
                 await _loadHabitData();
                 
+                // Check for achievements
+                if (context.mounted) {
+                  final achievementsController = context.read<AchievementsController>();
+                  await achievementsController.checkAchievementsOnTaskCompletion(_habit!);
+                }
+                
+                // Refresh progress controller to update stats immediately (using current tasks)
+                if (context.mounted) {
+                  final tasksController = context.read<TasksController>();
+                  await context.read<ProgressController>().refresh(currentTasks: tasksController.habits);
+                }
+                
                 if (!context.mounted) return;
                 
                 // Navigate back to tasks screen so user sees the task moved to "Done"
@@ -820,7 +866,18 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     try {
       await controller.undoCompleteHabit(_habit!);
       await _loadHabitData();
+      
+      // Refresh progress controller to update stats immediately (using current tasks)
+      if (mounted) {
+        final tasksController = context.read<TasksController>();
+        await context.read<ProgressController>().refresh(currentTasks: tasksController.habits);
+      }
+      
       if (!mounted) return;
+      
+      // Navigate back to tasks screen so user sees the task moved to "To-dos"
+      Navigator.pop(context);
+      
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Task completion undone"),

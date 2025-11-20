@@ -87,7 +87,7 @@ class OnboardingFinalReview extends StatelessWidget {
               ),
               const SizedBox(height: 40),
               const Text(
-                'Let\'s do a final review and start\nyour 66 days life reset journey.',
+                'Let\'s do a final review and start\nyour Reclaim journey.',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 24,

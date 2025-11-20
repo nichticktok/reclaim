@@ -119,7 +119,7 @@ class OnboardingProgressiveDifficulty extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               const Text(
-                'This progressive difficulty helps refresh your dopamine system and maintain motivation throughout the 66-day journey.',
+                'This progressive difficulty helps refresh your dopamine system and maintain motivation throughout your journey.',
                 style: TextStyle(color: Colors.white70, fontSize: 14),
                 textAlign: TextAlign.center,
               ),

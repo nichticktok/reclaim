@@ -4,6 +4,11 @@ import '../../../../models/habit_model.dart';
 import '../controllers/tasks_controller.dart';
 import '../../../progress/presentation/controllers/progress_controller.dart';
 import '../../../journey/presentation/controllers/journey_controller.dart';
+import '../../../milestone/presentation/controllers/milestone_controller.dart';
+import '../../../achievements/presentation/controllers/achievements_controller.dart';
+import '../../../achievements/presentation/screens/achievements_screen.dart';
+import '../../../streaks/presentation/screens/streaks_screen.dart';
+import '../../../progress/presentation/screens/today_progress_screen.dart';
 import '../../../profile/presentation/screens/settings_screen.dart';
 import 'select_preset_task_screen.dart';
 
@@ -25,6 +30,7 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
       context.read<TasksController>().initialize();
       context.read<ProgressController>().initialize();
       context.read<JourneyController>().initialize();
+      context.read<MilestoneController>().initialize();
     });
   }
 
@@ -127,14 +133,22 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
                         ),
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: EdgeInsets.only(
+                          left: 16,
+                          right: 16,
+                          top: 8,
+                          bottom: MediaQuery.of(context).padding.bottom + 80, // Account for bottom nav bar
+                        ),
                         itemCount: displayHabits.length,
                         itemBuilder: (context, index) {
                           final habit = displayHabits[index];
-                          return _buildNewTaskCard(
-                            habit: habit,
-                            controller: controller,
-                            context: context,
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _buildNewTaskCard(
+                              habit: habit,
+                              controller: controller,
+                              context: context,
+                            ),
                           );
                         },
                       ),
@@ -339,15 +353,16 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
 
 
   Widget _buildNewHeaderSection(TasksController controller, int todosCount, int doneCount, int skippedCount) {
-    return Consumer<ProgressController>(
-      builder: (context, progressController, child) {
+    return Consumer3<ProgressController, MilestoneController, AchievementsController>(
+      builder: (context, progressController, milestoneController, achievementsController, child) {
         final journeyController = context.read<JourneyController>();
         final currentStreak = progressController.currentStreak;
         final currentDay = journeyController.currentDay;
         final overallProgress = progressController.overallProgress;
+        final totalDays = milestoneController.getTotalDays();
         
-        // Calculate achievements from user stats
-        final achievements = progressController.completedTasks ~/ 10; // 1 achievement per 10 completed tasks
+        // Get real achievements count
+        final achievementsCount = achievementsController.unlockedCount;
         final successRate = (overallProgress * 100).toInt();
 
         return Container(
@@ -355,7 +370,7 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
           child: SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Column(
                 children: [
                   // Top row: Stats buttons and settings
@@ -365,22 +380,52 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
                       // Three circular stat buttons
                       Row(
                         children: [
-                          _buildStatButton(
-                            icon: Icons.local_fire_department,
-                            value: currentStreak.toString(),
-                            color: Colors.orange,
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const StreaksScreen(),
+                                ),
+                              );
+                            },
+                            child: _buildStatButton(
+                              icon: Icons.local_fire_department,
+                              value: currentStreak.toString(),
+                              color: Colors.orange,
+                            ),
                           ),
                           const SizedBox(width: 12),
-                          _buildStatButton(
-                            icon: Icons.military_tech,
-                            value: achievements.toString(),
-                            color: Colors.amber,
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const AchievementsScreen(),
+                                ),
+                              );
+                            },
+                            child: _buildStatButton(
+                              icon: Icons.military_tech,
+                              value: achievementsCount.toString(),
+                              color: Colors.amber,
+                            ),
                           ),
                           const SizedBox(width: 12),
-                          _buildStatButton(
-                            icon: Icons.auto_awesome,
-                            value: successRate.toString(),
-                            color: Colors.blue,
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const TodayProgressScreen(),
+                                ),
+                              );
+                            },
+                            child: _buildStatButton(
+                              icon: Icons.auto_awesome,
+                              value: successRate.toString(),
+                              color: Colors.blue,
+                            ),
                           ),
                         ],
                       ),
@@ -402,18 +447,18 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
                   
                   // Day counter
                   Text(
-                    "Day $currentDay/66",
+                    "Day $currentDay/$totalDays",
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
                   
                   // Motivational message
                   Text(
@@ -425,7 +470,7 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
                       fontSize: 16,
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
                   
                   // Task status buttons
                   Row(
@@ -676,6 +721,7 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
                   ),
                   Row(
                     children: [
+                      // Frequency (Everyday)
                       Icon(
                         Icons.repeat,
                         color: Colors.white.withValues(alpha: 0.8),
@@ -689,20 +735,9 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
                           fontSize: 12,
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      Icon(
-                        Icons.bar_chart,
-                        color: Colors.white.withValues(alpha: 0.8),
-                        size: 16,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        "Difficulty",
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.8),
-                          fontSize: 12,
-                        ),
-                      ),
+                      const Spacer(),
+                      // Difficulty indicator with color-coded bar
+                      _buildDifficultyIndicator(habit.difficulty),
                     ],
                   ),
                 ],
@@ -711,6 +746,61 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Build difficulty indicator with color-coded vertical bars (towers)
+  Widget _buildDifficultyIndicator(String difficulty) {
+    Color barColor;
+    List<double> barHeights; // Heights for each bar (0.0 to 1.0)
+    
+    switch (difficulty.toLowerCase()) {
+      case 'hard':
+        barColor = Colors.red;
+        barHeights = [1.0, 1.0, 1.0]; // All bars fully filled
+        break;
+      case 'medium':
+        barColor = Colors.orange;
+        barHeights = [0.5, 0.5, 0.5]; // All bars half filled
+        break;
+      case 'easy':
+        barColor = Colors.green;
+        barHeights = [0.33, 0.33, 0.33]; // All bars 1/3 filled
+        break;
+      default:
+        barColor = Colors.orange;
+        barHeights = [0.5, 0.5, 0.5]; // Default to medium
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        // Three vertical bars (towers)
+        ...List.generate(3, (index) {
+          return Container(
+            margin: EdgeInsets.only(right: index < 2 ? 3 : 0),
+            width: 4,
+            height: 20,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(2),
+            ),
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: FractionallySizedBox(
+                heightFactor: barHeights[index],
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: barColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+      ],
     );
   }
 

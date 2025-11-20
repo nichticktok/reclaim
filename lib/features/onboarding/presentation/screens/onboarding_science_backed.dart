@@ -34,7 +34,7 @@ class OnboardingScienceBacked extends StatelessWidget {
               Expanded(
                 child: ListView(
                   children: [
-                    _buildResearchCard('Harvard Study', '66 days to form habits'),
+                    _buildResearchCard('Harvard Study', 'Habit formation research'),
                     _buildResearchCard('UCL Research', 'Habit formation timeline'),
                     _buildResearchCard('Atomic Habits', 'James Clear\'s methodology'),
                   ],

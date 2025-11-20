@@ -39,7 +39,7 @@ class OnboardingRating extends StatelessWidget {
               ),
               const SizedBox(height: 48),
               const Text(
-                'Your Life Reset Rating',
+                'Your Reclaim Rating',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 24,

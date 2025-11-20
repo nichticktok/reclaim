@@ -12,6 +12,8 @@ import '../features/program/presentation/controllers/program_controller.dart';
 import '../features/journey/presentation/controllers/journey_controller.dart';
 import '../features/mastery/presentation/controllers/mastery_controller.dart';
 import '../features/penalty/presentation/controllers/penalty_controller.dart';
+import '../features/milestone/presentation/controllers/milestone_controller.dart';
+import '../features/achievements/presentation/controllers/achievements_controller.dart';
 
 /// Dependency Injection / Providers Setup
 /// Centralized provider configuration for the app
@@ -71,6 +73,14 @@ class AppProviders {
         ),
         ChangeNotifierProvider<PenaltyController>(
           create: (_) => PenaltyController(),
+          lazy: true,
+        ),
+        ChangeNotifierProvider<MilestoneController>(
+          create: (_) => MilestoneController(),
+          lazy: true,
+        ),
+        ChangeNotifierProvider<AchievementsController>(
+          create: (_) => AchievementsController(),
           lazy: true,
         ),
       ];

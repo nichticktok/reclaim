@@ -30,7 +30,7 @@ class OnboardingBeforeAfter extends StatelessWidget {
               ),
               const SizedBox(height: 48),
               const Text(
-                'After 66 days, you will conquer\nthe storm and awaken transformed',
+                'You will conquer the storm\nand awaken transformed',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 24,

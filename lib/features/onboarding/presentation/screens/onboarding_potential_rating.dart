@@ -62,7 +62,7 @@ class OnboardingPotentialRating extends StatelessWidget {
               ),
               const SizedBox(height: 32),
               const Text(
-                'After completing the 66-day program, your rating could reach 83!',
+                'After completing your milestone, your rating could reach 83!',
                 style: TextStyle(
                   color: Colors.white70,
                   fontSize: 16,

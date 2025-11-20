@@ -37,7 +37,7 @@ class OnboardingSubscriptionOffer extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               const Text(
-                'You are the main character. In 66 days, your epic comeback begins.',
+                'You are the main character.\nYour epic comeback begins now.',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 24,

@@ -39,7 +39,7 @@ class FirestoreProgramRepository implements ProgramRepository {
         'updatedAt': FieldValue.serverTimestamp(),
         'startDate': FieldValue.serverTimestamp(),
         'currentDay': 1,
-        'totalDays': 66,
+        'totalDays': 30, // Default, will be overridden by milestone
       }, SetOptions(merge: true));
     } catch (e) {
       throw Exception('Failed to create program: $e');
