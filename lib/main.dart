@@ -40,6 +40,9 @@ Future<void> main() async {
     debugPrint('[app_check] Skipped activating debug provider: $e');
   }
 
+  // Initialize environment variables (loads from assets/env/.env)
+  await AppEnv.initialize();
+
   if (kDebugMode) {
     final String defaultHost = _defaultEmulatorHost();
 

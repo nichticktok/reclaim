@@ -688,10 +688,13 @@ class _WorkoutRoadmapScreenState extends State<WorkoutRoadmapScreen> {
     if (!parentContext.mounted) return;
 
     // Get last deletion reason
-    final lastReason = await context.read<TasksController>().getLastDeletionReason();
+    final tasksController = context.read<TasksController>();
+    final lastReason = await tasksController.getLastDeletionReason();
     final reasonController = TextEditingController(text: lastReason ?? '');
     final contactController = TextEditingController();
     String selectedContactType = 'email';
+
+    if (!parentContext.mounted) return;
 
     showDialog(
       context: parentContext,

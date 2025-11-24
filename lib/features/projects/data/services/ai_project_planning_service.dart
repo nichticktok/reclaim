@@ -14,24 +14,17 @@ class AIProjectPlanningService implements AIPlanningRepository {
   // ============================================================================
   // API KEY CONFIGURATION
   // ============================================================================
-  // Option 1: Set your Gemini API key directly here (simplest for testing)
-  // IMPORTANT: Get your API key from https://makersuite.google.com/app/apikey
-  // The key should start with "AIza" (not "AQ." which is an access token)
-  static const String _geminiApiKeyDirect = 'AIzaSyCbLtRaJ17-PnkCyHH40wx3kM7hoENjoCo';// Put your API key here: 'AIza...'
-  
-  // Option 2: Use environment variable (more secure for production)
+  // IMPORTANT: For security, API keys should NEVER be hardcoded in source code.
+  // Use environment variables instead:
   // Run with: flutter run --dart-define=GEMINI_API_KEY=your_key_here
+  // Get your API key from: https://makersuite.google.com/app/apikey
   // ============================================================================
 
   /// Get API key for initialization (public static method)
   /// Used by main.dart to initialize Gemini
+  /// API key must be provided via --dart-define=GEMINI_API_KEY=your_key
   static String getApiKey() {
-    final key = _geminiApiKeyDirect.isNotEmpty 
-        ? _geminiApiKeyDirect 
-        : AppEnv.geminiApiKey;
-    
-    // Just check if key is empty, no format validation
-    return key;
+    return AppEnv.geminiApiKey;
   }
 
   static String _getApiKey() {
@@ -44,10 +37,8 @@ class AIProjectPlanningService implements AIPlanningRepository {
     if (apiKey.isEmpty) {
       throw Exception(
         'Gemini API key is not configured.\n\n'
-        'Please set it in one of these ways:\n'
-        '1. Edit lib/features/projects/data/services/ai_project_planning_service.dart\n'
-        '   Set _geminiApiKeyDirect = "YOUR_API_KEY_HERE"\n'
-        '2. Or run with: flutter run --dart-define=GEMINI_API_KEY=your_key\n\n'
+        'Please set it using environment variables:\n'
+        'Run with: flutter run --dart-define=GEMINI_API_KEY=your_key_here\n\n'
         'Get your API key from: https://makersuite.google.com/app/apikey\n\n'
         'Make sure Gemini.init() is called in main.dart!'
       );
@@ -76,10 +67,8 @@ class AIProjectPlanningService implements AIPlanningRepository {
     if (apiKey.isEmpty) {
       throw Exception(
         'Gemini API key is not configured.\n\n'
-        'Please set it in one of these ways:\n'
-        '1. Edit lib/features/projects/data/services/ai_project_planning_service.dart\n'
-        '   Set _geminiApiKeyDirect = "YOUR_API_KEY_HERE"\n'
-        '2. Or run with: flutter run --dart-define=GEMINI_API_KEY=your_key\n\n'
+        'Please set it using environment variables:\n'
+        'Run with: flutter run --dart-define=GEMINI_API_KEY=your_key_here\n\n'
         'Get your API key from: https://makersuite.google.com/app/apikey\n\n'
         'Make sure Gemini.init() is called in main.dart!'
       );
@@ -322,50 +311,6 @@ Example structure:
 ''';
   }
 
-  String _buildDailySchedulePrompt(ProjectPlanningInput input, ProjectPlan plan) {
-    final phasesJson = plan.phases.map((phase) {
-      final tasksJson = phase.tasks.map((task) => {
-        'title': task.title,
-        'description': task.description,
-        'estimatedHours': task.estimatedHours,
-      }).toList();
-      
-      return {
-        'title': phase.title,
-        'description': phase.description,
-        'order': phase.order,
-        'tasks': tasksJson,
-      };
-    }).toList();
-
-    return '''
-You are an expert at creating realistic daily schedules. Take the following project plan and create a day-by-day schedule that distributes work intelligently.
-
-PROJECT: ${input.title}
-TIMELINE: ${input.startDate.toString().split(' ')[0]} to ${input.endDate.toString().split(' ')[0]} (${input.totalDays} days)
-DAILY CAPACITY: ${input.hoursPerDay} hours per day
-
-PROJECT PLAN:
-${jsonEncode(phasesJson)}
-
-YOUR TASK:
-Create a daily schedule that makes sense for this project. You decide:
-- How to distribute tasks across days
-- When to schedule rest/buffer days
-- How to group related tasks
-- The optimal pacing for this project
-
-REQUIREMENTS:
-- All tasks must be scheduled
-- No day should exceed ${input.hoursPerDay} hours
-- Start from ${input.startDate.toString().split(' ')[0]} and end by ${input.endDate.toString().split(' ')[0]}
-- Use dates in YYYY-MM-DD format
-- Be realistic about what can be accomplished each day
-
-Return your schedule as JSON. Structure it in whatever way best represents the daily breakdown of this project.
-''';
-  }
-
   Future<String> _callGeminiAPI(String prompt) async {
     try {
       // Use Flutter Gemini SDK - according to https://pub.dev/documentation/flutter_gemini/3.0.0/#getting-started
@@ -539,104 +484,4 @@ Return your schedule as JSON. Structure it in whatever way best represents the d
     return jsonText.trim();
   }
 
-  // Deprecated: Use _parseDailyPlansArray instead for better performance
-  // Keeping this method for backward compatibility but it's no longer used
-  @Deprecated('Use _parseDailyPlansArray instead')
-  List<DailyPlan> _parseDailyPlans(String responseText, ProjectPlanningInput input) {
-    try {
-      // Extract JSON from response
-      String jsonText = _extractJsonFromResponse(responseText);
-      
-      final json = jsonDecode(jsonText) as Map<String, dynamic>;
-      
-      // Handle different possible structures
-      List<dynamic> dailyPlansJson;
-      if (json.containsKey('dailyPlans')) {
-        dailyPlansJson = json['dailyPlans'] as List<dynamic>;
-      } else if (json.containsKey('schedule')) {
-        dailyPlansJson = json['schedule'] as List<dynamic>;
-      } else if (json.containsKey('days')) {
-        dailyPlansJson = json['days'] as List<dynamic>;
-      } else if (json.values.first is List) {
-        dailyPlansJson = json.values.first as List<dynamic>;
-      } else {
-        throw Exception('Could not find daily plans in AI response structure');
-      }
-      
-      final dailyPlans = dailyPlansJson.map((planJson) {
-        final plan = planJson is Map<String, dynamic> 
-            ? planJson 
-            : Map<String, dynamic>.from(planJson as Map);
-        
-        // Parse date - handle different formats
-        String dateStr = plan['date'] as String? ?? plan['day'] as String? ?? '';
-        DateTime date;
-        
-        if (dateStr.contains('-')) {
-          final dateParts = dateStr.split('-');
-          date = DateTime(
-            int.parse(dateParts[0]),
-            int.parse(dateParts[1]),
-            int.parse(dateParts[2]),
-          );
-        } else {
-          // Try to parse other formats or use start date as fallback
-          date = input.startDate;
-        }
-        
-        // Get tasks - handle different field names
-        List<dynamic> tasksJson = [];
-        if (plan.containsKey('tasks')) {
-          tasksJson = plan['tasks'] as List<dynamic>;
-        } else if (plan.containsKey('items')) {
-          tasksJson = plan['items'] as List<dynamic>;
-        } else if (plan.containsKey('todo')) {
-          tasksJson = plan['todo'] as List<dynamic>;
-        }
-        
-        final tasks = tasksJson.asMap().entries.map((entry) {
-          final taskJson = entry.value is Map<String, dynamic>
-              ? entry.value as Map<String, dynamic>
-              : Map<String, dynamic>.from(entry.value as Map);
-          
-          // Handle different field names for hours
-          double hours = 1.0;
-          if (taskJson.containsKey('estimatedHours')) {
-            hours = (taskJson['estimatedHours'] as num).toDouble();
-          } else if (taskJson.containsKey('hours')) {
-            hours = (taskJson['hours'] as num).toDouble();
-          } else if (taskJson.containsKey('time')) {
-            hours = (taskJson['time'] as num).toDouble();
-          }
-          
-          return DailyTask(
-            title: taskJson['title'] as String? ?? taskJson['name'] as String? ?? 'Untitled Task',
-            description: taskJson['description'] as String? ?? taskJson['desc'] as String? ?? '',
-            estimatedHours: hours,
-            order: entry.key,
-            phase: taskJson['phase'] as String? ?? taskJson['category'] as String?,
-          );
-        }).toList();
-        
-        // Calculate total hours if not provided
-        double totalHours = plan['totalHours'] as double? ?? 
-            plan['hours'] as double? ?? 
-            tasks.fold(0.0, (sum, task) => sum + task.estimatedHours);
-        
-        return DailyPlan(
-          date: date,
-          tasks: tasks,
-          totalHours: totalHours,
-          notes: plan['notes'] as String? ?? plan['note'] as String?,
-        );
-      }).toList();
-      
-      // Sort by date
-      dailyPlans.sort((a, b) => a.date.compareTo(b.date));
-      
-      return dailyPlans;
-    } catch (e) {
-      throw Exception('Failed to parse daily plans from AI response: $e. Response was: $responseText');
-    }
-  }
 }

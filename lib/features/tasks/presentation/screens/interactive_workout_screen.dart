@@ -23,7 +23,7 @@ class _InteractiveWorkoutScreenState extends State<InteractiveWorkoutScreen> {
   bool _isResting = false;
   bool _isRestingBetweenExercises = false; // Track if we're resting between exercises vs between sets
   bool _workoutCompleted = false;
-  Map<int, List<bool>> _completedSets = {}; // exerciseIndex -> [set1 completed, set2 completed, ...]
+  final Map<int, List<bool>> _completedSets = {}; // exerciseIndex -> [set1 completed, set2 completed, ...]
   
   // Timer for tracking set duration
   Timer? _setTimer;

@@ -77,16 +77,60 @@ class _DailyJourneyScreenState extends State<DailyJourneyScreen> {
             );
           }
 
+          // Check if this day is today (only today can be edited)
+          final isToday = widget.dayNumber == controller.currentDay;
+          final isPastDay = widget.dayNumber < controller.currentDay;
+
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Show read-only message for past/future days
+                if (!isToday) ...[
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    margin: const EdgeInsets.only(bottom: 24),
+                    decoration: BoxDecoration(
+                      color: isPastDay 
+                          ? Colors.blue.withValues(alpha: 0.1)
+                          : Colors.grey.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isPastDay 
+                            ? Colors.blue.withValues(alpha: 0.3)
+                            : Colors.grey.withValues(alpha: 0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isPastDay ? Icons.history : Icons.lock_outline,
+                          color: isPastDay ? Colors.blue : Colors.grey,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            isPastDay 
+                                ? 'This is a past day. You can view your mood and journal entry, but cannot edit them.'
+                                : 'This is a future day. You cannot edit until this day arrives.',
+                            style: TextStyle(
+                              color: isPastDay ? Colors.blue.shade100 : Colors.grey.shade300,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 // Mood Selection
-                _buildMoodSection(controller),
+                _buildMoodSection(controller, isToday: isToday),
                 const SizedBox(height: 32),
                 // Journal Entry
-                _buildJournalSection(controller),
+                _buildJournalSection(controller, isToday: isToday),
               ],
             ),
           );
@@ -95,13 +139,13 @@ class _DailyJourneyScreenState extends State<DailyJourneyScreen> {
     );
   }
 
-  Widget _buildMoodSection(JourneyController controller) {
+  Widget _buildMoodSection(JourneyController controller, {required bool isToday}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'How are you feeling today?',
-          style: TextStyle(
+        Text(
+          isToday ? 'How are you feeling today?' : 'Mood',
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -114,40 +158,70 @@ class _DailyJourneyScreenState extends State<DailyJourneyScreen> {
           children: _moods.map((mood) {
             final isSelected = _selectedMood == mood;
             return GestureDetector(
-              onTap: () {
+              onTap: isToday ? () {
                 setState(() {
                   _selectedMood = mood;
                 });
                 controller.saveMood(mood, dayNumber: widget.dayNumber);
-              },
-              child: Container(
-                width: 70,
-                height: 70,
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? Colors.orange.withValues(alpha: 0.3)
-                      : Colors.white.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: isSelected ? Colors.orange : Colors.transparent,
-                    width: 2,
+              } : null,
+              child: Opacity(
+                opacity: isToday ? 1.0 : 0.6,
+                child: Container(
+                  width: 70,
+                  height: 70,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? Colors.orange.withValues(alpha: 0.3)
+                        : Colors.white.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isSelected ? Colors.orange : Colors.transparent,
+                      width: 2,
+                    ),
                   ),
-                ),
-                child: Center(
-                  child: Text(
-                    mood,
-                    style: const TextStyle(fontSize: 32),
+                  child: Center(
+                    child: Text(
+                      mood,
+                      style: const TextStyle(fontSize: 32),
+                    ),
                   ),
                 ),
               ),
             );
           }).toList(),
         ),
+        // Show selected mood for past days
+        if (!isToday && _selectedMood != null) ...[
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Text(
+                  _selectedMood!,
+                  style: const TextStyle(fontSize: 24),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Selected mood',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.7),
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
 
-  Widget _buildJournalSection(JourneyController controller) {
+  Widget _buildJournalSection(JourneyController controller, {required bool isToday}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -163,12 +237,19 @@ class _DailyJourneyScreenState extends State<DailyJourneyScreen> {
         TextField(
           controller: _journalController,
           maxLines: 8,
-          style: const TextStyle(color: Colors.white),
+          enabled: isToday,
+          readOnly: !isToday,
+          style: TextStyle(
+            // Make text appear dimmed for read-only
+            color: isToday ? Colors.white : Colors.white.withValues(alpha: 0.7),
+          ),
           decoration: InputDecoration(
-            hintText: 'Write about your day...',
+            hintText: isToday ? 'Write about your day...' : 'No journal entry for this day',
             hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
             filled: true,
-            fillColor: Colors.white.withValues(alpha: 0.05),
+            fillColor: isToday 
+                ? Colors.white.withValues(alpha: 0.05)
+                : Colors.white.withValues(alpha: 0.02),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
@@ -179,6 +260,12 @@ class _DailyJourneyScreenState extends State<DailyJourneyScreen> {
                 color: Colors.white.withValues(alpha: 0.1),
               ),
             ),
+            disabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: Colors.white.withValues(alpha: 0.05),
+              ),
+            ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(
@@ -187,40 +274,42 @@ class _DailyJourneyScreenState extends State<DailyJourneyScreen> {
               ),
             ),
           ),
-          onChanged: (value) {
+          onChanged: isToday ? (value) {
             // Auto-save as user types (debounced in real app)
-          },
+          } : null,
         ),
-        const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          height: 50,
-          child: ElevatedButton(
-            onPressed: () {
-              controller.saveJournalEntry(_journalController.text, dayNumber: widget.dayNumber);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Journal entry saved!'),
-                  backgroundColor: Colors.orange,
+        if (isToday) ...[
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              onPressed: () {
+                controller.saveJournalEntry(_journalController.text, dayNumber: widget.dayNumber);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Journal entry saved!'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
               ),
-            ),
-            child: const Text(
-              'Save Entry',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+              child: const Text(
+                'Save Entry',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ],
     );
   }

@@ -65,8 +65,8 @@ class _JourneyTimelineScreenState extends State<JourneyTimelineScreen> {
         elevation: 0,
         foregroundColor: Colors.white,
       ),
-      body: Consumer2<JourneyController, MilestoneController>(
-        builder: (context, journeyController, milestoneController, child) {
+      body: Consumer3<JourneyController, MilestoneController, TasksController>(
+        builder: (context, journeyController, milestoneController, tasksController, child) {
           if (journeyController.loading && journeyController.dayEntries.isEmpty) {
             return const Center(
               child: CircularProgressIndicator(color: Colors.orange),
@@ -76,11 +76,83 @@ class _JourneyTimelineScreenState extends State<JourneyTimelineScreen> {
           final currentDay = journeyController.currentDay;
           final totalDays = milestoneController.getTotalDays();
           final startDate = journeyController.journeyStartDate ?? DateTime.now();
+          final today = DateTime.now();
+          
+          // Get today's tasks completion status
+          final todayHabits = tasksController.habits
+              .where((habit) => habit.isScheduledForDate(today))
+              .toList();
+          final completedTasksCount = todayHabits.where((h) => h.isCompletedToday()).length;
+          final totalTasksCount = todayHabits.length;
+          final allTasksCompleted = totalTasksCount > 0 && completedTasksCount == totalTasksCount;
 
           return Column(
               children: [
               // Progress Header
               _buildProgressHeader(currentDay, totalDays),
+              
+              // Completion message for today (if all tasks completed)
+              if (allTasksCompleted)
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.green.shade600,
+                        Colors.green.shade700,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.green.withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.celebration_rounded,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'You completed $completedTasksCount task${completedTasksCount == 1 ? '' : 's'}!',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'How are you feeling?',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.9),
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               
               // Timeline View
               Expanded(
@@ -91,8 +163,12 @@ class _JourneyTimelineScreenState extends State<JourneyTimelineScreen> {
                     final dayNumber = index + 1;
                     final dayDate = startDate.add(Duration(days: dayNumber - 1));
                     final isCompleted = dayNumber < currentDay;
-                    final isCurrent = dayNumber == currentDay;
-                    final isFuture = dayNumber > currentDay;
+                    // Check if this day is actually today (not just current day in journey)
+                    final isToday = dayDate.year == today.year && 
+                                   dayDate.month == today.month && 
+                                   dayDate.day == today.day;
+                    final isCurrent = dayNumber == currentDay || isToday;
+                    final isFuture = dayNumber > currentDay && !isToday;
                     
                     final dayEntry = journeyController.dayEntries[dayNumber];
                     final mood = dayEntry?['mood'] as String?;
@@ -104,12 +180,14 @@ class _JourneyTimelineScreenState extends State<JourneyTimelineScreen> {
                       date: dayDate,
                       isCompleted: isCompleted,
                       isCurrent: isCurrent,
+                      isToday: isToday,
                       isFuture: isFuture,
                       mood: mood,
                       hasJournal: hasJournal,
-                  journeyController: journeyController,
+                      journeyController: journeyController,
                       totalDays: totalDays,
                       showConnector: index < totalDays - 1,
+                      allTasksCompleted: isToday ? allTasksCompleted : false,
                     );
                   },
                 ),
@@ -195,12 +273,14 @@ class _JourneyTimelineScreenState extends State<JourneyTimelineScreen> {
     required DateTime date,
     required bool isCompleted,
     required bool isCurrent,
+    required bool isToday,
     required bool isFuture,
     String? mood,
     required bool hasJournal,
     required JourneyController journeyController,
     required int totalDays,
     required bool showConnector,
+    bool allTasksCompleted = false,
   }) {
     return InkWell(
       onTap: () {
@@ -224,29 +304,40 @@ class _JourneyTimelineScreenState extends State<JourneyTimelineScreen> {
                   width: 48,
                   height: 48,
               decoration: BoxDecoration(
-                    color: isCurrent
+                    color: isToday
                         ? Colors.orange
-                        : isCompleted
-                            ? Colors.green
-                            : Colors.grey.shade700,
+                        : isCurrent
+                            ? Colors.orange.withValues(alpha: 0.7)
+                            : isCompleted
+                                ? Colors.green
+                                : Colors.grey.shade700,
                     shape: BoxShape.circle,
                     border: Border.all(
-                color: Colors.white,
-                      width: 2,
+                color: isToday ? Colors.orange : Colors.white,
+                      width: isToday ? 3 : 2,
                     ),
+                    boxShadow: isToday ? [
+                      BoxShadow(
+                        color: Colors.orange.withValues(alpha: 0.5),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                      ),
+                    ] : null,
                   ),
                   child: Center(
                     child: isCompleted
                         ? const Icon(Icons.check, color: Colors.white, size: 24)
-                        : isCurrent
+                        : isToday
                             ? const Icon(Icons.wb_sunny, color: Colors.white, size: 24)
-                            : Text(
-                                '$dayNumber',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            : isCurrent
+                                ? const Icon(Icons.wb_sunny, color: Colors.white, size: 20)
+                                : Text(
+                                    '$dayNumber',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                     ),
                   ),
                 ),
@@ -284,16 +375,27 @@ class _JourneyTimelineScreenState extends State<JourneyTimelineScreen> {
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isCurrent
-                      ? Colors.orange.withValues(alpha: 0.1)
-                      : const Color(0xFF1A1A1A),
+                  color: isToday
+                      ? Colors.orange.withValues(alpha: 0.15)
+                      : isCurrent
+                          ? Colors.orange.withValues(alpha: 0.1)
+                          : const Color(0xFF1A1A1A),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: isCurrent
+                    color: isToday
                         ? Colors.orange
-                        : Colors.white.withValues(alpha: 0.1),
-                    width: isCurrent ? 2 : 1,
+                        : isCurrent
+                            ? Colors.orange.withValues(alpha: 0.7)
+                            : Colors.white.withValues(alpha: 0.1),
+                    width: isToday ? 2 : isCurrent ? 1.5 : 1,
                   ),
+                  boxShadow: isToday ? [
+                    BoxShadow(
+                      color: Colors.orange.withValues(alpha: 0.2),
+                      blurRadius: 8,
+                      spreadRadius: 1,
+                    ),
+                  ] : null,
                 ),
           child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -315,14 +417,14 @@ class _JourneyTimelineScreenState extends State<JourneyTimelineScreen> {
               Text(
                 "Day $dayNumber",
                               style: TextStyle(
-                                color: isCurrent ? Colors.orange : Colors.white,
+                                color: isToday ? Colors.orange : isCurrent ? Colors.orange.withValues(alpha: 0.8) : Colors.white,
                                 fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
               ),
                           ],
                         ),
-                        if (isCurrent)
+                        if (isToday)
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 12,
@@ -331,6 +433,12 @@ class _JourneyTimelineScreenState extends State<JourneyTimelineScreen> {
       decoration: BoxDecoration(
                               color: Colors.orange,
                               borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.orange.withValues(alpha: 0.4),
+                                  blurRadius: 4,
+                                ),
+                              ],
       ),
                             child: const Text(
                               'Today',
@@ -350,6 +458,41 @@ class _JourneyTimelineScreenState extends State<JourneyTimelineScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
+                    // Completion message for today
+                    if (isToday && allTasksCompleted) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.green.withValues(alpha: 0.5),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.check_circle,
+                              color: Colors.green,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'All tasks completed! How are you feeling?',
+                                style: TextStyle(
+                                  color: Colors.green.shade100,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     // Mood indicator
                     if (mood != null)
                       Row(

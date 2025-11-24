@@ -41,7 +41,7 @@ class HabitModel {
     this.attribute, // Attribute for color coding
     Map<String, dynamic>? metadata,
     List<int>? daysOfWeek,
-    DateTime? specificDate,
+    this.specificDate,
     this.isActive = true,
     this.presetTaskId,
     DateTime? createdAt,
@@ -56,7 +56,6 @@ class HabitModel {
        dailySkipped = dailySkipped ?? {},
        metadata = metadata ?? {},
        daysOfWeek = daysOfWeek ?? _allDaysOfWeek,
-       specificDate = specificDate,
        proofType = ProofTypes.isValid(proofType) ? proofType : (requiresProof ? ProofTypes.text : null) {
     // Only set isActive to false when deletionStatus is "deleted", not "pending"
     if (deletionStatus == "deleted") {

@@ -13,8 +13,6 @@ import '../../data/repositories/firestore_plan_repository.dart';
 import '../../data/services/ai_project_planning_service.dart';
 import '../../../tasks/domain/repositories/deletion_request_repository.dart';
 import '../../../tasks/data/services/accountability_service.dart';
-import '../../../tasks/presentation/controllers/tasks_controller.dart';
-import '../../../tasks/data/repositories/firestore_tasks_repository.dart';
 
 class ProjectsController extends ChangeNotifier {
   final ProjectRepository _repository = FirestoreProjectRepository();

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../../core/models/plan_model.dart';
 import '../../domain/entities/project_planning_input.dart';
 import '../controllers/projects_controller.dart';
 import 'project_roadmap_screen.dart';

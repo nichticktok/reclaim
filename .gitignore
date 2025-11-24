@@ -43,3 +43,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Environment files (contain sensitive API keys)
+env/.env
+.env
+*.env
+assets/.env
+# Note: assets/.env is gitignored - use assets/.env.example as template

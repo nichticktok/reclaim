@@ -1,0 +1,6 @@
+{
+    "sonarlint.connectedMode.project": {
+        "connectionId": "nichticktok",
+        "projectKey": "nichticktok_reclaim"
+    }
+}

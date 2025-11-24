@@ -14,24 +14,17 @@ class AIWorkoutPlanningService implements AIWorkoutPlanningRepository {
   // ============================================================================
   // API KEY CONFIGURATION
   // ============================================================================
-  // Option 1: Set your Gemini API key directly here (simplest for testing)
-  // IMPORTANT: Get your API key from https://makersuite.google.com/app/apikey
-  // The key should start with "AIza" (not "AQ." which is an access token)
-  static const String _geminiApiKeyDirect = 'AIzaSyCbLtRaJ17-PnkCyHH40wx3kM7hoENjoCo'; // Put your API key here: 'AIza...'
-  
-  // Option 2: Use environment variable (more secure for production)
+  // IMPORTANT: For security, API keys should NEVER be hardcoded in source code.
+  // Use environment variables instead:
   // Run with: flutter run --dart-define=GEMINI_API_KEY=your_key_here
+  // Get your API key from: https://makersuite.google.com/app/apikey
   // ============================================================================
 
   /// Get API key for initialization (public static method)
   /// Used by main.dart to initialize Gemini
+  /// API key must be provided via --dart-define=GEMINI_API_KEY=your_key
   static String getApiKey() {
-    final key = _geminiApiKeyDirect.isNotEmpty 
-        ? _geminiApiKeyDirect 
-        : AppEnv.geminiApiKey;
-    
-    // Just check if key is empty, no format validation
-    return key;
+    return AppEnv.geminiApiKey;
   }
 
   static String _getApiKey() {
@@ -44,10 +37,8 @@ class AIWorkoutPlanningService implements AIWorkoutPlanningRepository {
     if (apiKey.isEmpty) {
       throw Exception(
         'Gemini API key is not configured.\n\n'
-        'Please set it in one of these ways:\n'
-        '1. Edit lib/features/workouts/data/services/ai_workout_planning_service.dart\n'
-        '   Set _geminiApiKeyDirect = "YOUR_API_KEY_HERE"\n'
-        '2. Or run with: flutter run --dart-define=GEMINI_API_KEY=your_key\n\n'
+        'Please set it using environment variables:\n'
+        'Run with: flutter run --dart-define=GEMINI_API_KEY=your_key_here\n\n'
         'Get your API key from: https://makersuite.google.com/app/apikey\n\n'
         'Make sure Gemini.init() is called in main.dart!'
       );
@@ -76,10 +67,8 @@ class AIWorkoutPlanningService implements AIWorkoutPlanningRepository {
     if (apiKey.isEmpty) {
       throw Exception(
         'Gemini API key is not configured.\n\n'
-        'Please set it in one of these ways:\n'
-        '1. Edit lib/features/workouts/data/services/ai_workout_planning_service.dart\n'
-        '   Set _geminiApiKeyDirect = "YOUR_API_KEY_HERE"\n'
-        '2. Or run with: flutter run --dart-define=GEMINI_API_KEY=your_key\n\n'
+        'Please set it using environment variables:\n'
+        'Run with: flutter run --dart-define=GEMINI_API_KEY=your_key_here\n\n'
         'Get your API key from: https://makersuite.google.com/app/apikey\n\n'
         'Make sure Gemini.init() is called in main.dart!'
       );

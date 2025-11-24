@@ -65,3 +65,6 @@ flutter:
     # 🔹 (Optional) folders for onboarding images / localization JSONs
     - assets/onboarding/
     - assets/lang/
+    
+    # 🔹 Environment configuration (loaded from assets/.env)
+    - assets/.env

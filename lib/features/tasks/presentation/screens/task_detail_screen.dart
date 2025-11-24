@@ -27,10 +27,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   HabitModel? _habit;
   bool _isLoading = false;
   bool _hasInitialized = false;
-  Timer? _workoutTimer;
-  int _workoutTimerSeconds = 0;
-  bool _isWorkoutTimerRunning = false;
-  bool _workoutTimerCompleted = false;
   DateTime? _viewDate; // The date being viewed (for checking if it's today)
   DeletionRequestModel? _pendingDeletionRequest; // Track pending deletion request
   String? _lastLoadedHabitId; // Track which habit ID we last loaded deletion request for
@@ -125,187 +121,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     );
   }
 
-  Widget _buildWorkoutTimerSection({
-    required TasksController controller,
-    required Map<String, dynamic> metadata,
-    required bool isCompleted,
-    required bool isSkipped,
-    required int minutes,
-  }) {
-    final dayLabel = metadata['dayLabel'] as String? ?? 'Workout';
-    final timerDisplay = _isWorkoutTimerRunning
-        ? _formatTimer(_workoutTimerSeconds)
-        : '${minutes.toString()} min';
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.timer, color: Colors.orange),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  '$dayLabel Workout Timer',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          if (_isWorkoutTimerRunning)
-            Text(
-              'Timer: $timerDisplay',
-              style: const TextStyle(
-                color: Colors.orangeAccent,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            )
-          else
-            Text(
-              'Estimated duration: $timerDisplay',
-              style: const TextStyle(color: Colors.white70),
-            ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: (_isWorkoutTimerRunning || isCompleted || isSkipped || _isLoading)
-                  ? null
-                  : () => _startWorkoutTimer(minutes, controller, metadata),
-              icon: Icon(
-                _isWorkoutTimerRunning ? Icons.pause_circle : Icons.play_arrow,
-              ),
-              label: Text(
-                _isWorkoutTimerRunning ? 'Timer Running' : 'Start Workout Timer',
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
-          if (_workoutTimerCompleted && !isCompleted) ...[
-            const SizedBox(height: 8),
-            const Text(
-              'Timer completed! Finalizing your workout...',
-              style: TextStyle(color: Colors.greenAccent, fontSize: 13),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  void _startWorkoutTimer(int minutes, TasksController controller, Map<String, dynamic> metadata) {
-    if (_isWorkoutTimerRunning || minutes <= 0) return;
-    _workoutTimer?.cancel();
-    setState(() {
-      _workoutTimerSeconds = minutes * 60;
-      _isWorkoutTimerRunning = true;
-      _workoutTimerCompleted = false;
-    });
-
-    _workoutTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      
-      if (_workoutTimerSeconds <= 1) {
-        timer.cancel();
-        if (mounted) {
-        setState(() {
-          _workoutTimerSeconds = 0;
-          _isWorkoutTimerRunning = false;
-          _workoutTimerCompleted = true;
-        });
-        _handleWorkoutTimerCompleted(controller, metadata, minutes);
-        }
-      } else {
-        if (mounted) {
-        setState(() {
-          _workoutTimerSeconds--;
-        });
-        }
-      }
-    });
-  }
-
-  Future<void> _handleWorkoutTimerCompleted(
-    TasksController controller,
-    Map<String, dynamic> metadata,
-    int minutes,
-  ) async {
-    if (_habit == null) return;
-    final dayLabel = metadata['dayLabel'] as String? ?? 'Workout';
-    final timestamp = DateFormat.jm().format(DateTime.now());
-    final proof =
-        'Completed $dayLabel workout for $minutes min using guided timer at $timestamp.';
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      await controller.submitProof(_habit!, proof);
-      await controller.completeHabit(_habit!, proof: proof);
-      await _loadHabitData();
-
-      if (!mounted) return;
-
-      // Save references before navigating
-      final navigator = Navigator.of(context);
-      final scaffoldMessenger = ScaffoldMessenger.of(context);
-      
-      navigator.pop();
-      scaffoldMessenger.showSnackBar(
-        const SnackBar(
-          content: Text("Workout completed! Great job 💪"),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      
-      // Save reference before showing snackbar
-      final scaffoldMessenger = ScaffoldMessenger.of(context);
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text("Error: ${e.toString()}"),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _workoutTimerCompleted = false;
-        });
-      }
-    }
-  }
-
-  String _formatTimer(int totalSeconds) {
-    final minutes = (totalSeconds ~/ 60).toString().padLeft(2, '0');
-    final seconds = (totalSeconds % 60).toString().padLeft(2, '0');
-    return '$minutes:$seconds';
-  }
-
   /// Handle workout completion from interactive workout screen
   /// The interactive workout itself serves as proof, so no additional proof input is needed
   Future<void> _handleWorkoutCompletion(
@@ -390,10 +205,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         } else if (arguments is Map) {
           // New format: Map with habit and viewDate
           _habit = arguments['habit'] as HabitModel?;
-          _viewDate = arguments['viewDate'] as DateTime?;
-          if (_viewDate == null) {
-            _viewDate = DateTime.now(); // Default to today if not specified
-          }
+          _viewDate = arguments['viewDate'] as DateTime? ?? DateTime.now(); // Default to today if not specified
         }
         // Load fresh data from database
         if (_habit != null) {
@@ -910,7 +722,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   @override
   void dispose() {
     _proofController.dispose();
-    _workoutTimer?.cancel();
     super.dispose();
   }
 
@@ -949,9 +760,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     final isPlanOrWorkoutTask = isPlanTask || isWorkoutTask;
     final canSkip = _habit!.isSystemAssigned && !isCompleted && !isSkipped && _canCompleteTask && !isPlanOrWorkoutTask;
     final metadata = _habit!.metadata;
-    final workoutMinutes = isWorkoutTask
-        ? (metadata['minutesPerSession'] as int? ?? 30)
-        : 0;
     final hasProof = dateProof != null && dateProof.isNotEmpty;
     final disableCompletionButton = isWorkoutTask && !isCompleted && !hasProof;
     
@@ -1078,18 +886,20 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               const SizedBox(height: 16),
               GestureDetector(
                 onTap: () async {
+                  // Store context references before async operations
+                  final currentContext = context;
+                  
                   // Load deletion request details if not already loaded
-                  var requestToShow = _pendingDeletionRequest;
-                  if (requestToShow == null) {
-                    requestToShow = await controller.getPendingDeletionRequestForHabit(_habit!.id);
-                    if (requestToShow != null && mounted) {
+                  var requestToShow = _pendingDeletionRequest ?? await controller.getPendingDeletionRequestForHabit(_habit!.id);
+                  if (requestToShow != null && mounted) {
+                    if (_pendingDeletionRequest == null) {
                       setState(() {
                         _pendingDeletionRequest = requestToShow;
                       });
                     }
-                  }
-                  if (requestToShow != null && mounted) {
-                    _showPendingDeletionDialog(context, controller, requestToShow);
+                    if (currentContext.mounted) {
+                      _showPendingDeletionDialog(currentContext, controller, requestToShow);
+                    }
                   }
                 },
                 child: Container(
@@ -1402,17 +1212,19 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     onPressed: _isLoading
                         ? null
                         : () async {
+                            // Store context references before async operations
+                            final currentContext = context;
+                            
                             // Check habit's deletionStatus first (immediate, no async)
                             if (hasPendingDeletion) {
-                              var requestToShow = _pendingDeletionRequest;
-                              if (requestToShow == null) {
-                                requestToShow = await controller.getPendingDeletionRequestForHabit(_habit!.id);
-                              }
-                              if (requestToShow != null && mounted) {
-                                _showPendingDeletionDialog(context, controller, requestToShow);
+                              var requestToShow = _pendingDeletionRequest ?? await controller.getPendingDeletionRequestForHabit(_habit!.id);
+                              if (requestToShow != null && mounted && currentContext.mounted) {
+                                _showPendingDeletionDialog(currentContext, controller, requestToShow);
                               }
                             } else {
-                              _showDeleteDialog(context, controller);
+                              if (mounted && currentContext.mounted) {
+                                _showDeleteDialog(currentContext, controller);
+                              }
                             }
                           },
                     style: OutlinedButton.styleFrom(
@@ -1860,40 +1672,45 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 // Check mounted before any async operations
                 if (!mounted) return;
                 
+                // Store context references before async operations
+                final navigator = Navigator.of(parentContext);
+                final scaffoldMessenger = ScaffoldMessenger.of(parentContext);
+                final achievementsController = parentContext.read<AchievementsController>();
+                final tasksController = parentContext.read<TasksController>();
+                final progressController = parentContext.read<ProgressController>();
+                
                 await _loadHabitData();
                 
                 // Check for achievements - use parent context (only if widget is still mounted)
                 if (mounted) {
                   try {
-                    final achievementsController = parentContext.read<AchievementsController>();
                     if (_habit != null) {
-                  await achievementsController.checkAchievementsOnTaskCompletion(_habit!);
-                }
+                      await achievementsController.checkAchievementsOnTaskCompletion(_habit!);
+                    }
                   } catch (e) {
                     debugPrint('Error checking achievements: $e');
                   }
                 }
                 
-          // Refresh progress controller - use parent context (only if widget is still mounted)
-          if (mounted) {
+                // Refresh progress controller - use parent context (only if widget is still mounted)
+                if (mounted) {
                   try {
-                    final tasksController = parentContext.read<TasksController>();
-                    await parentContext.read<ProgressController>().refresh(currentTasks: tasksController.habits);
+                    await progressController.refresh(currentTasks: tasksController.habits);
                   } catch (e) {
                     debugPrint('Error refreshing progress: $e');
                   }
                 }
                 
-          // Navigate back to tasks screen and show snackbar - use parent context (only if widget is still mounted)
-          if (mounted) {
-                Navigator.pop(parentContext);
-                ScaffoldMessenger.of(parentContext).showSnackBar(
-                  const SnackBar(
-                    content: Text("Task completed with proof! ✅"),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
+                // Navigate back to tasks screen and show snackbar - use parent context (only if widget is still mounted)
+                if (mounted) {
+                  navigator.pop();
+                  scaffoldMessenger.showSnackBar(
+                    const SnackBar(
+                      content: Text("Task completed with proof! ✅"),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
             },
       ),
     );

@@ -212,8 +212,12 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
     final earliestDate = _getEarliestDate();
     final latestDate = _getLatestDate(controller);
     
+    // Store context references before async operations
+    final currentContext = context;
+    final scaffoldMessenger = ScaffoldMessenger.of(currentContext);
+    
     final picked = await showDatePicker(
-      context: context,
+      context: currentContext,
       initialDate: _selectedDate,
       firstDate: earliestDate,
       lastDate: latestDate,
@@ -245,7 +249,7 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
       if (pickedNormalized.isBefore(earliestNormalized)) {
         // Show error and don't change date
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger.showSnackBar(
           SnackBar(
             content: Text(
               'Cannot select date before account creation (${_getMonthName(earliestDate.month)} ${earliestDate.day}, ${earliestDate.year})',
