@@ -16,6 +16,7 @@ import '../features/web/landing_page.dart';
 import 'package:recalim/core/providers/language_provider.dart';
 import '../features/tools/presentation/widgets/screen_blocker_overlay.dart';
 import '../features/tools/presentation/widgets/screen_blocker_lifecycle_observer.dart';
+import '../core/theme/app_theme.dart';
 
 class ReclaimApp extends StatelessWidget {
   const ReclaimApp({super.key});
@@ -28,6 +29,7 @@ class ReclaimApp extends StatelessWidget {
           child: MaterialApp(
             title: 'Reclaim',
             debugShowCheckedModeBanner: false,
+            theme: AppTheme.darkTheme,
             builder: (context, child) {
               return ScreenBlockerOverlay(child: child!);
             },
@@ -130,9 +132,9 @@ Future<bool> _ensureUserDocSafe(User user) async {
 class _Splash extends StatelessWidget {
   const _Splash();
   @override
-  Widget build(BuildContext context) => const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator(color: Colors.orange)),
+  Widget build(BuildContext context) => Scaffold(
+        backgroundColor: AppTheme.darkTheme.scaffoldBackgroundColor,
+        body: const Center(child: CircularProgressIndicator()),
       );
 }
 

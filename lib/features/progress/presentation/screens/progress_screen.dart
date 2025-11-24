@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:recalim/core/models/habit_model.dart';
+import 'package:recalim/core/theme/app_colors.dart';
+import 'package:recalim/core/theme/app_design_system.dart';
 import '../../../../core/utils/attribute_utils.dart';
 import '../../../tasks/presentation/controllers/tasks_controller.dart';
 import '../controllers/progress_controller.dart';
@@ -35,16 +37,25 @@ class _ProgressScreenState extends State<ProgressScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0D0F),
-      body: Consumer2<ProgressController, TasksController>(
-        builder: (context, progressController, tasksController, child) {
-          // Only show loading if we have no data yet
-          if ((progressController.loading && progressController.currentProgress == null) ||
-              (tasksController.loading && tasksController.habits.isEmpty)) {
-            return const Center(
-              child: CircularProgressIndicator(color: Colors.orange),
-            );
-          }
+      backgroundColor: AppColors.background,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: AppDesignSystem.lightBackgroundGradient,
+            stops: const [0.0, 0.5, 1.0],
+          ),
+        ),
+        child: Consumer2<ProgressController, TasksController>(
+          builder: (context, progressController, tasksController, child) {
+            // Only show loading if we have no data yet
+            if ((progressController.loading && progressController.currentProgress == null) ||
+                (tasksController.loading && tasksController.habits.isEmpty)) {
+              return const Center(
+                child: CircularProgressIndicator(),
+              );
+            }
 
           final allHabits = tasksController.habits;
           
@@ -153,9 +164,16 @@ class _ProgressScreenState extends State<ProgressScreen> {
               // "Your Improvements" section with category tabs
               Expanded(
                 child: Container(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF0D0D0F),
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        const Color(0xFF2A4A6F),
+                        const Color(0xFF365A7F),
+                      ],
+                    ),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
                   ),
                   child: Column(
                     children: [
@@ -202,7 +220,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
               ),
             ],
           );
-        },
+          },
+        ),
       ),
     );
   }
@@ -276,18 +295,27 @@ class _ProgressScreenState extends State<ProgressScreen> {
     final icon = statusInfo['icon'] as IconData;
     final message = statusInfo['message'] as String;
 
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            statusColor,
-            statusColor.withValues(alpha: 0.9),
+      return Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              statusColor,
+              statusColor.withOpacity(0.9),
+              statusColor.withOpacity(0.7),
+            ],
+            stops: const [0.0, 0.5, 1.0],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: statusColor.withOpacity(0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
-      ),
       child: SafeArea(
         bottom: false,
         child: Padding(
@@ -519,8 +547,9 @@ class _ProgressScreenState extends State<ProgressScreen> {
       category: '', // HabitModel doesn't have category, use empty string
     );
     
-    // Get background gradient using centralized utility
-    final gradient = AttributeUtils.getAttributeGradient(attribute);
+    // Get background gradient and color using centralized utility
+    final gradientColors = AttributeUtils.getAttributeGradient(attribute);
+    final attributeColor = AttributeUtils.getAttributeColor(attribute);
     
     // Get quote based on attribute
     String getQuote() {
@@ -550,16 +579,18 @@ class _ProgressScreenState extends State<ProgressScreen> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: gradient,
+            colors: [
+              gradientColors[0],
+              gradientColors[1],
+              gradientColors[0].withOpacity(0.8),
+            ],
           ),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          border: Border.all(
+            color: attributeColor.withOpacity(0.3),
+            width: 1.5,
+          ),
+          boxShadow: AppDesignSystem.getColoredShadow(attributeColor),
         ),
         child: Stack(
           children: [

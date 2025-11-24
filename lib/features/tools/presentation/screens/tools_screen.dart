@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:recalim/core/theme/app_colors.dart';
+import 'package:recalim/core/theme/app_design_system.dart';
 import '../../../projects/presentation/screens/plans_list_screen.dart';
 import 'screen_blocker_screen.dart';
 
@@ -8,7 +10,7 @@ class ToolsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0D0F),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Row(
           mainAxisSize: MainAxisSize.min,
@@ -37,9 +39,35 @@ class ToolsScreen extends StatelessWidget {
         elevation: 0,
         foregroundColor: Colors.white,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: AppDesignSystem.lightBackgroundGradient,
+            stops: const [0.0, 0.5, 1.0],
+          ),
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                const Color(0xFF2A4A6F),
+                const Color(0xFF365A7F),
+              ],
+            ),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+          ),
+          child: SingleChildScrollView(
+          padding: const EdgeInsets.only(
+            top: 16,
+            left: 20,
+            right: 20,
+            bottom: 20,
+          ),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
@@ -141,6 +169,8 @@ class ToolsScreen extends StatelessWidget {
               ],
             ),
           ],
+        ),
+          ),
         ),
       ),
     );

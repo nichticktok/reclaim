@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:recalim/core/theme/app_colors.dart';
+import 'package:recalim/core/theme/app_design_system.dart';
 import '../../../tasks/presentation/controllers/tasks_controller.dart';
 import '../../../milestone/presentation/controllers/milestone_controller.dart';
 import '../controllers/journey_controller.dart';
@@ -36,7 +38,7 @@ class _JourneyTimelineScreenState extends State<JourneyTimelineScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0D0F),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Row(
           mainAxisSize: MainAxisSize.min,
@@ -65,7 +67,16 @@ class _JourneyTimelineScreenState extends State<JourneyTimelineScreen> {
         elevation: 0,
         foregroundColor: Colors.white,
       ),
-      body: Consumer3<JourneyController, MilestoneController, TasksController>(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: AppDesignSystem.lightBackgroundGradient,
+            stops: const [0.0, 0.5, 1.0],
+          ),
+        ),
+        child: Consumer3<JourneyController, MilestoneController, TasksController>(
         builder: (context, journeyController, milestoneController, tasksController, child) {
           if (journeyController.loading && journeyController.dayEntries.isEmpty) {
             return const Center(
@@ -87,7 +98,7 @@ class _JourneyTimelineScreenState extends State<JourneyTimelineScreen> {
           final allTasksCompleted = totalTasksCount > 0 && completedTasksCount == totalTasksCount;
 
           return Column(
-              children: [
+            children: [
               // Progress Header
               _buildProgressHeader(currentDay, totalDays),
               
@@ -154,10 +165,22 @@ class _JourneyTimelineScreenState extends State<JourneyTimelineScreen> {
                   ),
                 ),
               
-              // Timeline View
+              // Timeline View with rounded top accent
               Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        const Color(0xFF2A4A6F),
+                        const Color(0xFF365A7F),
+                      ],
+                    ),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+                  ),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   itemCount: totalDays,
                   itemBuilder: (context, index) {
                     final dayNumber = index + 1;
@@ -190,11 +213,13 @@ class _JourneyTimelineScreenState extends State<JourneyTimelineScreen> {
                       allTasksCompleted: isToday ? allTasksCompleted : false,
                     );
                   },
+                  ),
                 ),
-                ),
-              ],
+              ),
+            ],
           );
         },
+        ),
       ),
     );
   }

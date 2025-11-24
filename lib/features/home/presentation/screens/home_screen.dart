@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:recalim/core/models/user_model.dart';
+import 'package:recalim/core/theme/app_colors.dart';
+import 'package:recalim/core/theme/app_design_system.dart';
 import '../controllers/home_controller.dart';
 import '../../../tasks/presentation/screens/daily_tasks_screen.dart';
 import '../../../progress/presentation/screens/progress_screen.dart';
@@ -113,10 +115,21 @@ class _HomeScreenState extends State<HomeScreen> {
               canPop: !blockerController.isBlocked,
               child: Scaffold(
                 extendBody: true,
-                backgroundColor: Colors.grey.shade100,
-                body: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  child: _screens.isNotEmpty ? _screens[_selectedIndex] : const SizedBox(),
+                backgroundColor: AppColors.background,
+                body: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: AppDesignSystem.lightBackgroundGradient,
+                      stops: const [0.0, 0.5, 1.0],
+                    ),
+                  ),
+                  child: AnimatedSwitcher(
+                    duration: AppDesignSystem.animationNormal,
+                    switchInCurve: AppDesignSystem.animationCurve,
+                    child: _screens.isNotEmpty ? _screens[_selectedIndex] : const SizedBox(),
+                  ),
                 ),
                 bottomNavigationBar: _buildFloatingNavBar(blockerController.isBlocked),
               ),
@@ -134,10 +147,16 @@ class _HomeScreenState extends State<HomeScreen> {
         opacity: isBlocked ? 0.5 : 1.0, // Dim the nav bar when blocked
         child: Container(
           decoration: BoxDecoration(
-            color: const Color(0xFF1A1A1A),
+            color: AppColors.surface,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
+                color: Colors.black.withOpacity(0.5),
+                blurRadius: 20,
+                offset: const Offset(0, -4),
+                spreadRadius: 0,
+              ),
+              BoxShadow(
+                color: AppColors.primary.withOpacity(0.1),
                 blurRadius: 10,
                 offset: const Offset(0, -2),
               ),
@@ -146,7 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
@@ -173,19 +192,33 @@ class _HomeScreenState extends State<HomeScreen> {
           ? null // Disable navigation when blocked
           : () => setState(() => _selectedIndex = index),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeInOut,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        duration: AppDesignSystem.animationNormal,
+        curve: AppDesignSystem.animationCurve,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected
-              ? Colors.orange.withValues(alpha: 0.2)
-              : Colors.transparent,
+          gradient: isSelected
+              ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.primary.withOpacity(0.2),
+                    AppColors.primary.withOpacity(0.1),
+                  ],
+                )
+              : null,
+          color: isSelected ? null : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
+          border: isSelected
+              ? Border.all(
+                  color: AppColors.primary.withOpacity(0.3),
+                  width: 1,
+                )
+              : null,
         ),
         child: Icon(
           icon,
-          color: isSelected ? Colors.orange : Colors.white54,
-          size: isSelected ? 24 : 22,
+          color: isSelected ? AppColors.primary : AppColors.textTertiary,
+          size: 22,
         ),
       ),
     );

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:recalim/core/theme/app_colors.dart';
+import 'package:recalim/core/theme/app_design_system.dart';
 import 'package:recalim/features/community/domain/entities/community_post_model.dart';
 import 'package:recalim/features/community/domain/entities/community_comment_model.dart';
 import '../controllers/community_controller.dart';
@@ -61,7 +63,7 @@ class _CommunityScreenState extends State<CommunityScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0D0F),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text("Community", style: TextStyle(color: Colors.white)),
         centerTitle: true,
@@ -87,7 +89,16 @@ class _CommunityScreenState extends State<CommunityScreen>
           ),
         ],
       ),
-      body: Consumer<CommunityController>(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: AppDesignSystem.lightBackgroundGradient,
+            stops: const [0.0, 0.5, 1.0],
+          ),
+        ),
+        child: Consumer<CommunityController>(
         builder: (context, controller, child) {
           if (controller.loading && controller.posts.isEmpty) {
             return const Center(
@@ -95,14 +106,29 @@ class _CommunityScreenState extends State<CommunityScreen>
             );
           }
 
-          return RefreshIndicator(
-            onRefresh: () => controller.refreshFeed(),
-            color: Colors.orange,
-            child: SingleChildScrollView(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).padding.bottom + 80,
+          return Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  const Color(0xFF2A4A6F),
+                  const Color(0xFF365A7F),
+                ],
               ),
-              child: Column(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+            ),
+            child: RefreshIndicator(
+              onRefresh: () => controller.refreshFeed(),
+              color: Colors.orange,
+              child: SingleChildScrollView(
+                padding: EdgeInsets.only(
+                  top: 16,
+                  left: 20,
+                  right: 20,
+                  bottom: MediaQuery.of(context).padding.bottom + 80,
+                ),
+                child: Column(
                 children: [
                   const SizedBox(height: 16),
 
@@ -222,8 +248,10 @@ class _CommunityScreenState extends State<CommunityScreen>
                 ],
               ),
             ),
+            ),
           );
         },
+        ),
       ),
     );
   }

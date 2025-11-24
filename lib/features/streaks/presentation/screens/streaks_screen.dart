@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:recalim/core/theme/app_colors.dart';
+import 'package:recalim/core/theme/app_design_system.dart';
 import '../../../tasks/presentation/controllers/tasks_controller.dart';
 import 'package:recalim/core/models/habit_model.dart';
 
@@ -39,8 +41,17 @@ class _StreaksScreenState extends State<StreaksScreen> with TickerProviderStateM
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0D0F),
-      body: Consumer<TasksController>(
+      backgroundColor: AppColors.background,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: AppDesignSystem.lightBackgroundGradient,
+            stops: const [0.0, 0.5, 1.0],
+          ),
+        ),
+        child: Consumer<TasksController>(
         builder: (context, controller, child) {
           // Ensure controller is initialized
           if (!controller.loading && controller.habits.isEmpty) {
@@ -55,11 +66,11 @@ class _StreaksScreenState extends State<StreaksScreen> with TickerProviderStateM
             });
           }
 
-          if (controller.loading && controller.habits.isEmpty) {
-            return const Center(
-              child: CircularProgressIndicator(color: Colors.orange),
-            );
-          }
+            if (controller.loading && controller.habits.isEmpty) {
+              return const Center(
+                child: CircularProgressIndicator(),
+              );
+            }
 
           // Calculate current streak and today's task completion
           final streakInfo = _calculateCurrentStreak(controller.habits);
@@ -300,6 +311,7 @@ class _StreaksScreenState extends State<StreaksScreen> with TickerProviderStateM
             ),
           );
         },
+        ),
       ),
     );
   }

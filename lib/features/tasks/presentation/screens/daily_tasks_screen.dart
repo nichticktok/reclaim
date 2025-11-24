@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:recalim/core/models/habit_model.dart';
+import 'package:recalim/core/theme/app_colors.dart';
+import 'package:recalim/core/theme/app_text_styles.dart';
+import 'package:recalim/core/theme/app_design_system.dart';
 import '../controllers/tasks_controller.dart';
 import '../../../progress/presentation/controllers/progress_controller.dart';
 import '../../../journey/presentation/controllers/journey_controller.dart';
@@ -389,13 +392,22 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0D0F),
-      body: Consumer<TasksController>(
+      backgroundColor: AppColors.background,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: AppDesignSystem.lightBackgroundGradient,
+            stops: const [0.0, 0.5, 1.0],
+          ),
+        ),
+        child: Consumer<TasksController>(
         builder: (context, controller, child) {
           // Only show loading if we have no data yet
           if (controller.loading && controller.habits.isEmpty) {
             return const Center(
-              child: CircularProgressIndicator(color: Colors.orange),
+              child: CircularProgressIndicator(),
             );
           }
 
@@ -509,9 +521,21 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
               // Use separate counts that exclude pending deletion tasks from todos count
               _buildNewHeaderSection(controller, todosCount, doneCount, skippedCount, _selectedDate),
               
-              // Tasks list
+              // Tasks list with rounded top accent
               Expanded(
-                child: displayHabits.isEmpty
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        const Color(0xFF2A4A6F),
+                        const Color(0xFF365A7F),
+                      ],
+                    ),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+                  ),
+                  child: displayHabits.isEmpty
                     ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -558,16 +582,16 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
                       )
                     : ListView.builder(
                         padding: EdgeInsets.only(
-                          left: 16,
-                          right: 16,
-                          top: 8,
-                          bottom: MediaQuery.of(context).padding.bottom + 80, // Account for bottom nav bar
+                          left: 24,
+                          right: 24,
+                          top: 16,
+                          bottom: MediaQuery.of(context).padding.bottom + 100, // Account for bottom nav bar
                         ),
                         itemCount: displayHabits.length,
                         itemBuilder: (context, index) {
                           final habit = displayHabits[index];
                           return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.only(bottom: 16),
                             child: _buildNewTaskCard(
                               habit: habit,
                               controller: controller,
@@ -576,10 +600,12 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
                           );
                         },
                       ),
+                ),
               ),
             ],
           );
         },
+        ),
       ),
     );
   }
@@ -821,11 +847,20 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
         }
 
         return Container(
-          color: const Color(0xFF0D0D0F),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                const Color(0xFF1E3A5F),
+                const Color(0xFF2A4A6F),
+              ],
+            ),
+          ),
           child: SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
               child: Column(
                 children: [
                   // Top row: Stats buttons and settings
@@ -863,7 +898,7 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
                             child: _buildStatButton(
                               icon: Icons.military_tech,
                               value: achievementsCount.toString(),
-                              color: Colors.amber,
+                              color: AppColors.accentAmber,
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -879,7 +914,7 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
                             child: _buildStatButton(
                               icon: Icons.auto_awesome,
                               value: successRate.toString(),
-                              color: Colors.blue,
+                              color: AppColors.accentBlue,
                             ),
                           ),
                         ],
@@ -894,10 +929,10 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
                             ),
                           );
                         },
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.settings,
-                          color: Colors.white,
-                          size: 28,
+                          color: AppColors.textSecondary,
+                          size: 24,
                         ),
                       ),
                     ],
@@ -914,8 +949,8 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
                         onPressed: _canGoToPreviousDay ? _goToPreviousDay : null,
                         icon: Icon(
                           Icons.chevron_left,
-                          color: _canGoToPreviousDay ? Colors.white : Colors.white.withValues(alpha: 0.3),
-                          size: 28,
+                          color: _canGoToPreviousDay ? AppColors.textPrimary : AppColors.textTertiary,
+                          size: 24,
                         ),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
@@ -932,10 +967,10 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
                       // Next day button
                       IconButton(
                         onPressed: _goToNextDay,
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.chevron_right,
-                          color: Colors.white,
-                          size: 28,
+                          color: AppColors.textPrimary,
+                          size: 24,
                         ),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
@@ -947,10 +982,10 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
                   // Motivational message
                   Text(
                     _getMotivationalMessage(dayNumber, selectedDate),
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.8),
-                      fontSize: 16,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 12),
                   
@@ -988,15 +1023,26 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
                       GestureDetector(
                         onTap: () => _showAddTaskDialog(context),
                         child: Container(
-                          width: 50,
-                          height: 40,
+                          width: 56,
+                          height: 48,
                           decoration: BoxDecoration(
-                            color: Colors.black,
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: AppColors.primaryGradient,
+                            ),
                             borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primary.withOpacity(0.4),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
                           child: const Icon(
                             Icons.add,
-                            color: Colors.white,
+                            color: AppColors.textPrimary,
                             size: 24,
                           ),
                         ),
@@ -1051,23 +1097,44 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.white : const Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Center(
-          child: Text(
-            "$label $count",
-            style: TextStyle(
-              color: isSelected ? Colors.black : Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          decoration: BoxDecoration(
+            gradient: isSelected
+                ? LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.primary.withOpacity(0.2),
+                      AppColors.primary.withOpacity(0.1),
+                    ],
+                  )
+                : null,
+            color: isSelected ? null : AppColors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: isSelected
+                ? Border.all(color: AppColors.primary, width: 1.5)
+                : null,
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Center(
+            child: Text(
+              "$label ($count)",
+              style: AppTextStyles.labelMedium.copyWith(
+                color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+              ),
             ),
           ),
         ),
-      ),
     );
   }
 
@@ -1084,7 +1151,7 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
     );
     
     // Get background gradient and color using centralized utility
-    final gradient = AttributeUtils.getAttributeGradient(attribute);
+    final gradientColors = AttributeUtils.getAttributeGradient(attribute);
     final attributeColor = AttributeUtils.getAttributeColor(attribute);
     final frequency = "Everyday"; // Frequency can be added to HabitModel in the future
 
@@ -1097,16 +1164,18 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: gradient,
+            colors: [
+              gradientColors[0],
+              gradientColors[1],
+              gradientColors[0].withOpacity(0.8),
+            ],
           ),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          border: Border.all(
+            color: attributeColor.withOpacity(0.3),
+            width: 1.5,
+          ),
+          boxShadow: AppDesignSystem.getColoredShadow(attributeColor),
         ),
         child: Stack(
           children: [
@@ -1152,10 +1221,8 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
                             Expanded(
                               child: Text(
                                 habit.title,
-                                style: const TextStyle(
+                                style: AppTextStyles.h3.copyWith(
                                   color: Colors.white,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
