@@ -105,7 +105,14 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
         run: |
           printf '%s' '${{ secrets.FIREBASE_SERVICE_ACCOUNT_RECLAIM }}' > "$GOOGLE_APPLICATION_CREDENTIALS"
-          firebase deploy --only functions --project reclaim-f1b3f --non-interactive --force
+          # Grant Secret Manager access if needed (requires gcloud CLI)
+          # The service account needs roles/secretmanager.secretAccessor role
+          firebase deploy --only functions --project reclaim-f1b3f --non-interactive --force || {
+            echo "⚠️  Deployment failed. Check Secret Manager permissions."
+            echo "The service account needs 'Secret Manager Secret Accessor' role."
+            echo "See .github/FIREBASE_SECRETS_SETUP.md for instructions."
+            exit 1
+          }
           rm -f "$GOOGLE_APPLICATION_CREDENTIALS"
 
       - name: Deploy to Firebase Hosting
