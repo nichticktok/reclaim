@@ -1,0 +1,50 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  sonarqube:
+    name: SonarQube
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+
+      # Setup Flutter
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'  # Update to match your Flutter version
+          channel: 'stable'
+
+      # Get dependencies
+      - name: Get dependencies
+        run: flutter pub get
+
+      # Run Flutter analyze
+      - name: Run Flutter analyze
+        run: flutter analyze
+
+      # Run tests (optional, but recommended for better analysis)
+      - name: Run tests
+        run: flutter test --coverage || true  # Continue even if tests fail
+
+      # Build the project
+      - name: Build
+        run: |
+          flutter build apk --debug || flutter build ios --debug --no-codesign || true
+          # The build might fail on CI without proper signing, so we continue anyway
+
+      # SonarQube Scan
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+

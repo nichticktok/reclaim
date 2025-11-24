@@ -210,7 +210,8 @@ class WorkoutExerciseModel {
   final String name;
   final int sets;
   final String reps; // e.g., "8-12" or "10"
-  final int restSeconds;
+  final int restSeconds; // Rest between sets
+  final int restBetweenExercises; // Rest after completing all sets, before next exercise
   final String instructions;
   final String equipment; // bodyweight, dumbbell, etc.
   final String intensityLevel; // easy, medium, hard
@@ -223,6 +224,7 @@ class WorkoutExerciseModel {
     required this.sets,
     required this.reps,
     required this.restSeconds,
+    this.restBetweenExercises = 90, // Default 90 seconds between exercises
     required this.instructions,
     required this.equipment,
     this.intensityLevel = 'medium',
@@ -236,6 +238,7 @@ class WorkoutExerciseModel {
       'sets': sets,
       'reps': reps,
       'restSeconds': restSeconds,
+      'restBetweenExercises': restBetweenExercises,
       'instructions': instructions,
       'equipment': equipment,
       'intensityLevel': intensityLevel,
@@ -251,6 +254,7 @@ class WorkoutExerciseModel {
       sets: map['sets'] ?? 3,
       reps: map['reps'] ?? '10',
       restSeconds: map['restSeconds'] ?? 60,
+      restBetweenExercises: map['restBetweenExercises'] ?? 90,
       instructions: map['instructions'] ?? '',
       equipment: map['equipment'] ?? 'bodyweight',
       intensityLevel: map['intensityLevel'] ?? 'medium',
@@ -265,6 +269,7 @@ class WorkoutExerciseModel {
     int? sets,
     String? reps,
     int? restSeconds,
+    int? restBetweenExercises,
     String? instructions,
     String? equipment,
     String? intensityLevel,
@@ -277,6 +282,7 @@ class WorkoutExerciseModel {
       sets: sets ?? this.sets,
       reps: reps ?? this.reps,
       restSeconds: restSeconds ?? this.restSeconds,
+      restBetweenExercises: restBetweenExercises ?? this.restBetweenExercises,
       instructions: instructions ?? this.instructions,
       equipment: equipment ?? this.equipment,
       intensityLevel: intensityLevel ?? this.intensityLevel,

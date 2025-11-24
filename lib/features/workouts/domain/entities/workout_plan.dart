@@ -52,7 +52,8 @@ class WorkoutExercise {
   final String name;
   final int sets;
   final String reps; // e.g., "8-12" or "10"
-  final int restSeconds;
+  final int restSeconds; // Rest between sets
+  final int restBetweenExercises; // Rest after completing all sets, before next exercise
   final String instructions;
 
   WorkoutExercise({
@@ -60,6 +61,7 @@ class WorkoutExercise {
     required this.sets,
     required this.reps,
     required this.restSeconds,
+    this.restBetweenExercises = 90, // Default 90 seconds between exercises
     required this.instructions,
   });
 
@@ -69,6 +71,7 @@ class WorkoutExercise {
       'sets': sets,
       'reps': reps,
       'restSeconds': restSeconds,
+      'restBetweenExercises': restBetweenExercises,
       'instructions': instructions,
     };
   }

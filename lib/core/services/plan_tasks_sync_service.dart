@@ -69,6 +69,7 @@ class PlanTasksSyncService {
             'sets': data['sets'] ?? 3,
             'reps': data['reps'] ?? '10',
             'restSeconds': data['restSeconds'] ?? 60,
+            'restBetweenExercises': data['restBetweenExercises'] ?? 90,
             'instructions': data['instructions'] ?? '',
           };
         }).toList();

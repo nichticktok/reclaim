@@ -21,13 +21,94 @@ class _InteractiveWorkoutScreenState extends State<InteractiveWorkoutScreen> {
   Timer? _restTimer;
   int _restSecondsRemaining = 0;
   bool _isResting = false;
+  bool _isRestingBetweenExercises = false; // Track if we're resting between exercises vs between sets
   bool _workoutCompleted = false;
   Map<int, List<bool>> _completedSets = {}; // exerciseIndex -> [set1 completed, set2 completed, ...]
+  
+  // Timer for tracking set duration
+  Timer? _setTimer;
+  int _setSecondsElapsed = 0;
+  bool _setTimerRunning = false;
+  DateTime? _setStartTime;
+  
+  // Overall workout timer
+  Timer? _workoutTimer;
+  int _workoutTotalSeconds = 0;
+  DateTime? _workoutStartTime;
 
   @override
   void initState() {
     super.initState();
     _loadExercises();
+    _startWorkoutTimer();
+  }
+  
+  void _startWorkoutTimer() {
+    _workoutStartTime = DateTime.now();
+    _workoutTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_workoutStartTime != null) {
+        setState(() {
+          _workoutTotalSeconds = DateTime.now().difference(_workoutStartTime!).inSeconds;
+        });
+      }
+    });
+  }
+  
+  void _startSetTimer() {
+    _setStartTime = DateTime.now();
+    _setSecondsElapsed = 0;
+    _setTimerRunning = true;
+    
+    _setTimer?.cancel();
+    _setTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_setStartTime != null) {
+        setState(() {
+          _setSecondsElapsed = DateTime.now().difference(_setStartTime!).inSeconds;
+        });
+      }
+    });
+  }
+  
+  void _stopSetTimer() {
+    _setTimer?.cancel();
+    setState(() {
+      _setTimerRunning = false;
+      _setSecondsElapsed = 0;
+      _setStartTime = null;
+    });
+  }
+  
+  /// Estimate time needed for a set based on reps
+  int _estimateSetTime(int exerciseIndex) {
+    final reps = _getRepsForExercise(exerciseIndex);
+    // Try to parse reps (could be "10", "10-12", "30s", etc.)
+    int repCount = 10; // Default
+    if (reps.contains('-')) {
+      // Range like "10-12", take the average
+      final parts = reps.split('-');
+      if (parts.length == 2) {
+        final first = int.tryParse(parts[0].trim()) ?? 10;
+        final second = int.tryParse(parts[1].trim()) ?? 12;
+        repCount = ((first + second) / 2).round();
+      }
+    } else if (reps.endsWith('s')) {
+      // Time-based like "30s"
+      return int.tryParse(reps.replaceAll('s', '')) ?? 30;
+    } else {
+      repCount = int.tryParse(reps) ?? 10;
+    }
+    
+    // Estimate: ~2-3 seconds per rep, minimum 20 seconds, maximum 120 seconds
+    final estimatedSeconds = (repCount * 2.5).round();
+    return estimatedSeconds.clamp(20, 120);
   }
 
   void _loadExercises() {
@@ -47,6 +128,13 @@ class _InteractiveWorkoutScreenState extends State<InteractiveWorkoutScreen> {
     if (_exercises.isEmpty) {
       // No exercises, mark as completed
       _workoutCompleted = true;
+    } else {
+      // Start set timer for first exercise
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _startSetTimer();
+        }
+      });
     }
   }
 
@@ -73,6 +161,16 @@ class _InteractiveWorkoutScreenState extends State<InteractiveWorkoutScreen> {
     return 60; // Default
   }
 
+  int _getRestBetweenExercises(int exerciseIndex) {
+    if (exerciseIndex >= _exercises.length) return 90; // Default 90 seconds between exercises
+    final exercise = _exercises[exerciseIndex];
+    final rest = exercise['restBetweenExercises'];
+    if (rest is num) {
+      return rest.toInt();
+    }
+    return 90; // Default 90 seconds between exercises
+  }
+
   String _getRepsForExercise(int exerciseIndex) {
     if (exerciseIndex >= _exercises.length) return '10';
     final exercise = _exercises[exerciseIndex];
@@ -92,6 +190,9 @@ class _InteractiveWorkoutScreenState extends State<InteractiveWorkoutScreen> {
   void _completeSet() {
     if (_currentExerciseIndex >= _exercises.length) return;
 
+    // Stop set timer
+    _stopSetTimer();
+
     setState(() {
       _completedSets[_currentExerciseIndex]![_currentSet - 1] = true;
     });
@@ -99,18 +200,28 @@ class _InteractiveWorkoutScreenState extends State<InteractiveWorkoutScreen> {
     final totalSets = _getSetsForExercise(_currentExerciseIndex);
     
     if (_currentSet < totalSets) {
-      // More sets remaining - start rest timer
-      _startRestTimer();
+      // More sets remaining - start rest timer between sets
+      _startRestTimer(isBetweenExercises: false);
     } else {
-      // All sets completed for this exercise
-      _moveToNextExercise();
+      // All sets completed for this exercise - check if there's a next exercise
+      if (_currentExerciseIndex < _exercises.length - 1) {
+        // There's a next exercise - start rest timer between exercises
+        _startRestTimer(isBetweenExercises: true);
+      } else {
+        // No more exercises - complete workout
+        _completeWorkout();
+      }
     }
   }
 
-  void _startRestTimer() {
-    final restSeconds = _getRestSecondsForExercise(_currentExerciseIndex);
+  void _startRestTimer({required bool isBetweenExercises}) {
+    final restSeconds = isBetweenExercises
+        ? _getRestBetweenExercises(_currentExerciseIndex)
+        : _getRestSecondsForExercise(_currentExerciseIndex);
+    
     setState(() {
       _isResting = true;
+      _isRestingBetweenExercises = isBetweenExercises;
       _restSecondsRemaining = restSeconds;
     });
 
@@ -126,19 +237,38 @@ class _InteractiveWorkoutScreenState extends State<InteractiveWorkoutScreen> {
           _restSecondsRemaining--;
         } else {
           _isResting = false;
-          _currentSet++;
+          _isRestingBetweenExercises = false;
           timer.cancel();
+          
+          if (isBetweenExercises) {
+            // Move to next exercise
+            _moveToNextExercise();
+          } else {
+            // Move to next set
+            _currentSet++;
+            _startSetTimer();
+          }
         }
       });
     });
   }
 
   void _skipRest() {
+    final wasBetweenExercises = _isRestingBetweenExercises;
     _restTimer?.cancel();
     setState(() {
       _isResting = false;
-      _currentSet++;
+      _isRestingBetweenExercises = false;
     });
+    
+    if (wasBetweenExercises) {
+      // Move to next exercise
+      _moveToNextExercise();
+    } else {
+      // Move to next set
+      _currentSet++;
+      _startSetTimer();
+    }
   }
 
   void _moveToNextExercise() {
@@ -147,8 +277,11 @@ class _InteractiveWorkoutScreenState extends State<InteractiveWorkoutScreen> {
         _currentExerciseIndex++;
         _currentSet = 1;
         _isResting = false;
+        _isRestingBetweenExercises = false;
         _restSecondsRemaining = 0;
       });
+      // Start set timer for first set of next exercise
+      _startSetTimer();
     } else {
       // All exercises completed
       _completeWorkout();
@@ -157,6 +290,8 @@ class _InteractiveWorkoutScreenState extends State<InteractiveWorkoutScreen> {
 
   void _completeWorkout() {
     _restTimer?.cancel();
+    _setTimer?.cancel();
+    _workoutTimer?.cancel();
     setState(() {
       _workoutCompleted = true;
     });
@@ -164,19 +299,24 @@ class _InteractiveWorkoutScreenState extends State<InteractiveWorkoutScreen> {
 
   void _previousExercise() {
     if (_currentExerciseIndex > 0) {
+      _restTimer?.cancel();
+      _stopSetTimer();
       setState(() {
         _currentExerciseIndex--;
         _currentSet = 1;
         _isResting = false;
         _restSecondsRemaining = 0;
-        _restTimer?.cancel();
       });
+      // Start set timer for the previous exercise
+      _startSetTimer();
     }
   }
 
   @override
   void dispose() {
     _restTimer?.cancel();
+    _setTimer?.cancel();
+    _workoutTimer?.cancel();
     super.dispose();
   }
 
@@ -299,6 +439,34 @@ class _InteractiveWorkoutScreenState extends State<InteractiveWorkoutScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Overall Workout Timer
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A1A1A),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.blue.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.timer, color: Colors.blue, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Workout Time: ${_formatTime(_workoutTotalSeconds)}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
             // Exercise Name
             Text(
               exerciseName,
@@ -361,10 +529,10 @@ class _InteractiveWorkoutScreenState extends State<InteractiveWorkoutScreen> {
 
             const SizedBox(height: 32),
 
-            // Rest Timer (if resting)
+            // Rest Timer (if resting) - Display similar to set timer
             if (_isResting) ...[
               Container(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFF6B35).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
@@ -375,24 +543,89 @@ class _InteractiveWorkoutScreenState extends State<InteractiveWorkoutScreen> {
                 ),
                 child: Column(
                   children: [
-                    const Text(
-                      'Rest Time',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          _isRestingBetweenExercises ? 'Rest Between Exercises' : 'Rest Timer',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (!_isRestingBetweenExercises)
+                          Text(
+                            'Set $_currentSet of $totalSets',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
+                          )
+                        else
+                          Text(
+                            'Next: ${_currentExerciseIndex < _exercises.length - 1 ? _getExerciseName(_currentExerciseIndex + 1) : "Complete"}',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 16),
-                    Text(
-                      _formatTime(_restSecondsRemaining),
-                      style: const TextStyle(
-                        color: Color(0xFFFF6B35),
-                        fontSize: 48,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        Column(
+                          children: [
+                            const Text(
+                              'Remaining',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _formatTime(_restSecondsRemaining),
+                              style: const TextStyle(
+                                color: Color(0xFFFF6B35),
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Container(
+                          width: 1,
+                          height: 50,
+                          color: Colors.white.withValues(alpha: 0.2),
+                        ),
+                        Column(
+                          children: [
+                            const Text(
+                              'Recommended',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _formatTime(_isRestingBetweenExercises
+                                  ? _getRestBetweenExercises(_currentExerciseIndex)
+                                  : _getRestSecondsForExercise(_currentExerciseIndex)),
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 24,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
                     ElevatedButton.icon(
                       onPressed: _skipRest,
                       style: ElevatedButton.styleFrom(
@@ -403,9 +636,9 @@ class _InteractiveWorkoutScreenState extends State<InteractiveWorkoutScreen> {
                         ),
                       ),
                       icon: const Icon(Icons.skip_next, color: Colors.white),
-                      label: const Text(
-                        'Skip Rest',
-                        style: TextStyle(color: Colors.white),
+                      label: Text(
+                        _isRestingBetweenExercises ? 'Skip to Next Exercise' : 'Skip Rest',
+                        style: const TextStyle(color: Colors.white),
                       ),
                     ),
                   ],
@@ -416,6 +649,113 @@ class _InteractiveWorkoutScreenState extends State<InteractiveWorkoutScreen> {
 
             // Sets Progress
             if (!_isResting) ...[
+              // Set Timer Display
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF6B35).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: const Color(0xFFFF6B35).withValues(alpha: 0.5),
+                    width: 2,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Set Timer',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          'Set $_currentSet of $totalSets',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        Column(
+                          children: [
+                            const Text(
+                              'Elapsed',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _formatTime(_setSecondsElapsed),
+                              style: const TextStyle(
+                                color: Color(0xFFFF6B35),
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Container(
+                          width: 1,
+                          height: 50,
+                          color: Colors.white.withValues(alpha: 0.2),
+                        ),
+                        Column(
+                          children: [
+                            const Text(
+                              'Recommended',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _formatTime(_estimateSetTime(_currentExerciseIndex)),
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 24,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    if (!_setTimerRunning) ...[
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: _startSetTimer,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFF6B35),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                        ),
+                        icon: const Icon(Icons.play_arrow, color: Colors.white),
+                        label: const Text(
+                          'Start Set Timer',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              
               Text(
                 'Set $_currentSet of $totalSets',
                 style: const TextStyle(

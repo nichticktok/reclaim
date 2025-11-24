@@ -153,7 +153,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Follow along with your $dayLabel workout',
+                  '$dayLabel Workout Timer',
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
@@ -1194,16 +1194,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               ),
             ),
 
-            if (isWorkoutTask) ...[
-              const SizedBox(height: 20),
-              _buildWorkoutTimerSection(
-                controller: controller,
-                metadata: metadata,
-                isCompleted: isCompleted,
-                isSkipped: isSkipped,
-                minutes: workoutMinutes,
-              ),
-            ],
+            // Workout timer section removed - using interactive workout instead
 
             // Proof Section - Only show if proof is already submitted (hidden if deletion is pending)
             if (proofRequired && dateProof != null && dateProof.isNotEmpty && !hasPendingDeletion) ...[

@@ -170,7 +170,8 @@ Create a complete workout plan that includes:
        - Exercise name
        - Sets (number of sets)
        - Reps (e.g., "8-12" or "10" or "30s" for time-based)
-       - Rest seconds between sets
+       - Rest seconds between sets (rest time after completing each set of this exercise)
+       - Rest seconds between exercises (rest time after completing all sets of this exercise, before moving to next exercise)
        - Instructions/form tips
      * Total minutes (should be around ${input.minutesPerSession} minutes)
    - Distribute sessions evenly across the weeks
@@ -208,6 +209,7 @@ Example structure:
               "sets": 3,
               "reps": "10-15",
               "restSeconds": 60,
+              "restBetweenExercises": 90,
               "instructions": "Maintain a neutral spine and keep elbows at 45°."
             }
           ]
@@ -226,6 +228,7 @@ Example structure:
           "sets": 3,
           "reps": "10-15",
           "restSeconds": 60,
+          "restBetweenExercises": 90,
           "instructions": "Maintain a neutral spine and keep elbows at 45°."
         }
       ],
@@ -335,6 +338,7 @@ Example structure:
               sets: sets,
               reps: exercise['reps'] as String? ?? '10',
               restSeconds: (exercise['restSeconds'] as num?)?.toInt() ?? 60,
+              restBetweenExercises: (exercise['restBetweenExercises'] as num?)?.toInt() ?? 90,
               instructions: exercise['instructions'] as String? ?? '',
             );
           }).toList();
@@ -454,6 +458,7 @@ Example structure:
           sets: sets,
           reps: exerciseJson['reps'] as String? ?? '10',
           restSeconds: (exerciseJson['restSeconds'] as num?)?.toInt() ?? 60,
+          restBetweenExercises: (exerciseJson['restBetweenExercises'] as num?)?.toInt() ?? 90,
           instructions: exerciseJson['instructions'] as String? ?? '',
           equipment: input.equipment.isNotEmpty ? input.equipment.first : 'bodyweight',
           intensityLevel: input.fitnessLevel == 'beginner' 
@@ -531,6 +536,7 @@ Example structure:
             sets: sets,
             reps: exercise['reps'] as String? ?? '10',
             restSeconds: (exercise['restSeconds'] as num?)?.toInt() ?? 60,
+            restBetweenExercises: (exercise['restBetweenExercises'] as num?)?.toInt() ?? 90,
             instructions: exercise['instructions'] as String? ?? '',
             equipment: input.equipment.isNotEmpty ? input.equipment.first : 'bodyweight',
             intensityLevel: input.fitnessLevel == 'beginner' 
