@@ -45,8 +45,11 @@ app.*.map.json
 /android/app/release
 
 # Environment files (contain sensitive API keys)
+# NEVER commit files with actual API keys - they are security risks
 env/.env
 .env
 *.env
 assets/.env
-# Note: assets/.env is gitignored - use assets/.env.example as template
+# Exception: .env.example template files are safe to commit (no real keys)
+!assets/.env.example
+!env/.env.example

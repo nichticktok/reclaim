@@ -2,11 +2,23 @@
 
 This folder contains environment variables for local development.
 
+## ⚠️ Security Warning
+
+**NEVER commit API keys to version control!** The `.env` file is gitignored.
+
 ## Setup
 
 The `.env` file in this folder contains sensitive API keys and configuration.
 
 **⚠️ IMPORTANT: This file is NOT committed to version control (see .gitignore)**
+
+## Recommended Setup
+
+For the easiest setup, use `assets/.env` instead (see `SETUP_ENV.md` in project root):
+
+1. Copy template: `cp assets/.env.example assets/.env`
+2. Edit `assets/.env` with your API key
+3. Run `flutter run` - it works automatically!
 
 ## File Structure
 
