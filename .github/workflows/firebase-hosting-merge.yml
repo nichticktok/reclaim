@@ -5,10 +5,44 @@ name: Deploy to Firebase Hosting on merge
 on:
   push:
     branches: [ main ]
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 jobs:
+  sonarqube:
+    name: SonarQube Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for SonarQube analysis
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Run Flutter analyze
+        run: flutter analyze || true
+        continue-on-error: true
+
+      - name: Run tests with coverage
+        run: flutter test --coverage || true
+        continue-on-error: true
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
   build_and_deploy:
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'  # Only deploy on main branch pushes
 
     steps:
       - name: Checkout
