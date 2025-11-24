@@ -17,6 +17,7 @@ dependencies:
   firebase_core: ^3.15.2
   cloud_firestore: ^5.4.2
   firebase_auth: ^5.7.0
+  firebase_storage: ^12.4.2
 
   # 👇 Google Sign-In
   google_sign_in: ^7.2.0
@@ -27,6 +28,11 @@ dependencies:
   # 🧠 State management
   provider: ^6.1.2
 
+  # 🌐 HTTP client for AI API calls
+  http: ^1.2.2
+
+  # 🤖 Flutter Gemini SDK
+  flutter_gemini: ^3.0.0
   
   cloud_functions: ^5.0.4
 

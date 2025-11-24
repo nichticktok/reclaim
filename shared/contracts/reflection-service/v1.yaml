@@ -1,0 +1,146 @@
+openapi: 3.0.3
+info:
+  title: Recalim Reflection Service API
+  version: "1.0.0"
+  description: Journaling, reflection prompts, and streak tracking endpoints.
+servers:
+  - url: https://api.recalim.com/reflections
+paths:
+  /entries:
+    post:
+      summary: Create a reflection entry
+      tags: [reflections]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReflectionEntryDraft'
+      responses:
+        "201":
+          description: Entry created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReflectionEntry'
+    get:
+      summary: Query reflection entries
+      tags: [reflections]
+      parameters:
+        - in: query
+          name: userId
+          schema:
+            type: string
+        - in: query
+          name: rangeStart
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: rangeEnd
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReflectionEntry'
+  /entries/{entryId}:
+    delete:
+      summary: Delete a reflection entry
+      tags: [reflections]
+      parameters:
+        - $ref: '#/components/parameters/EntryId'
+      responses:
+        "204":
+          description: Removed
+  /streaks/{userId}:
+    get:
+      summary: Retrieve reflection streak status
+      tags: [streaks]
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        "200":
+          description: Current streak data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Streak'
+  /prompts:
+    get:
+      summary: List reflection prompts
+      tags: [prompts]
+      responses:
+        "200":
+          description: Prompt catalog
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Prompt'
+components:
+  parameters:
+    EntryId:
+      name: entryId
+      in: path
+      required: true
+      schema:
+        type: string
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    ReflectionEntryDraft:
+      type: object
+      required: [userId, promptId, content]
+      properties:
+        userId:
+          type: string
+        promptId:
+          type: string
+        content:
+          type: string
+        mood:
+          type: string
+    ReflectionEntry:
+      allOf:
+        - $ref: '#/components/schemas/ReflectionEntryDraft'
+        - type: object
+          properties:
+            id:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+    Streak:
+      type: object
+      properties:
+        userId:
+          type: string
+        current:
+          type: integer
+        longest:
+          type: integer
+        updatedAt:
+          type: string
+          format: date-time
+    Prompt:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+

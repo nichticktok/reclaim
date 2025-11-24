@@ -1,0 +1,91 @@
+version: "3.9"
+
+services:
+  api-gateway:
+    build: ../../services/api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      AUTH_SERVICE_URL: http://auth-service:8080
+      PROGRAM_SERVICE_URL: http://program-service:8080
+      USER_PROFILE_SERVICE_URL: http://user-profile-service:8080
+      REFLECTION_SERVICE_URL: http://reflection-service:8080
+      COMMUNITY_SERVICE_URL: http://community-service:8080
+      REPORTING_SERVICE_URL: http://reporting-service:8080
+    depends_on:
+      - auth-service
+
+  auth-service:
+    build: ../../services/auth-service
+    environment:
+      PORT: 8080
+      DATABASE_URL: postgres://recalim:recalim@postgres:5432/auth
+      MAILJET_API_KEY: changeme
+      MAILJET_SECRET: changeme
+    depends_on:
+      - postgres
+
+  user-profile-service:
+    build: ../../services/user-profile-service
+    environment:
+      PORT: 8080
+      DATABASE_URL: postgres://recalim:recalim@postgres:5432/profile
+    depends_on:
+      - postgres
+
+  program-service:
+    build: ../../services/program-service
+    environment:
+      PORT: 8080
+      FIRESTORE_EMULATOR_HOST: firestore:8080
+    depends_on:
+      - firestore
+
+  reflection-service:
+    build: ../../services/reflection-service
+    environment:
+      PORT: 8080
+      FIRESTORE_EMULATOR_HOST: firestore:8080
+    depends_on:
+      - firestore
+
+  community-service:
+    build: ../../services/community-service
+    environment:
+      PORT: 8080
+      DATABASE_URL: postgres://recalim:recalim@postgres:5432/community
+    depends_on:
+      - postgres
+
+  reporting-service:
+    build: ../../services/reporting-service
+    environment:
+      PORT: 8080
+      DATABASE_URL: postgres://recalim:recalim@postgres:5432/reporting
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: recalim
+      POSTGRES_PASSWORD: recalim
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  firestore:
+    image: mtlynch/firestore-emulator
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+
+  pubsub:
+    image: messagebird/gcloud-pubsub-emulator:latest
+    restart: unless-stopped
+    ports:
+      - "8681:8681"
+
+volumes:
+  postgres-data:
+

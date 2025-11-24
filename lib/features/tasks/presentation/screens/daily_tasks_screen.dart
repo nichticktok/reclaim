@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../../models/habit_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:recalim/core/models/habit_model.dart';
 import '../controllers/tasks_controller.dart';
 import '../../../progress/presentation/controllers/progress_controller.dart';
 import '../../../journey/presentation/controllers/journey_controller.dart';
@@ -9,8 +11,11 @@ import '../../../achievements/presentation/controllers/achievements_controller.d
 import '../../../achievements/presentation/screens/achievements_screen.dart';
 import '../../../streaks/presentation/screens/streaks_screen.dart';
 import '../../../rating/presentation/screens/rating_screen.dart';
+import '../../../../core/utils/attribute_utils.dart';
 import '../../../profile/presentation/screens/settings_screen.dart';
 import 'select_preset_task_screen.dart';
+import '../../../projects/presentation/controllers/projects_controller.dart';
+import 'package:recalim/core/models/project_model.dart';
 
 class DailyTasksScreen extends StatefulWidget {
   const DailyTasksScreen({super.key});
@@ -21,6 +26,8 @@ class DailyTasksScreen extends StatefulWidget {
 
 class _DailyTasksScreenState extends State<DailyTasksScreen> {
   String _selectedFilter = "To-dos"; // To-dos, Done, Skipped
+  DateTime _selectedDate = DateTime.now(); // Currently selected date for viewing tasks
+  DateTime? _accountCreationDate; // Account creation date (earliest allowed date)
 
   @override
   void initState() {
@@ -31,7 +38,348 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
       context.read<ProgressController>().initialize();
       context.read<JourneyController>().initialize();
       context.read<MilestoneController>().initialize();
+      _loadAccountCreationDate();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload habits when returning to this screen (e.g., after syncing plans)
+    final tasksController = context.read<TasksController>();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        tasksController.reloadHabits();
+      }
+    });
+  }
+
+
+  /// Load account creation date from Firestore
+  Future<void> _loadAccountCreationDate() async {
+    try {
+      final auth = FirebaseAuth.instance.currentUser;
+      if (auth == null) return;
+
+      final firestore = FirebaseFirestore.instance;
+      final userDoc = await firestore.collection('users').doc(auth.uid).get();
+      
+      if (userDoc.exists) {
+        final data = userDoc.data();
+        if (data != null && data['createdAt'] != null) {
+          final createdAt = data['createdAt'];
+          DateTime? accountDate;
+          
+          if (createdAt is Timestamp) {
+            accountDate = createdAt.toDate();
+          } else if (createdAt is DateTime) {
+            accountDate = createdAt;
+          }
+          
+          if (accountDate != null && mounted) {
+            // Normalize to start of day
+            final normalizedDate = DateTime(accountDate.year, accountDate.month, accountDate.day);
+            final selectedDateNormalized = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+            
+            debugPrint('📅 Account creation date loaded: $normalizedDate');
+            debugPrint('📅 Selected date: $selectedDateNormalized');
+            
+            setState(() {
+              _accountCreationDate = normalizedDate;
+              
+              // If selected date is before account creation, adjust it
+              if (selectedDateNormalized.isBefore(normalizedDate)) {
+                debugPrint('⚠️ Selected date is before account creation, adjusting to: $normalizedDate');
+                _selectedDate = normalizedDate;
+              }
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading account creation date: $e');
+      // Fallback to today if we can't load it
+      if (mounted) {
+        final today = DateTime.now();
+        setState(() {
+          _accountCreationDate = DateTime(today.year, today.month, today.day);
+        });
+      }
+    }
+  }
+
+  /// Navigate to previous day
+  void _goToPreviousDay() {
+    final earliestDate = _getEarliestDate();
+    final selectedDateNormalized = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+    final earliestDateNormalized = DateTime(earliestDate.year, earliestDate.month, earliestDate.day);
+    
+    if (selectedDateNormalized.isAfter(earliestDateNormalized)) {
+    setState(() {
+      _selectedDate = _selectedDate.subtract(const Duration(days: 1));
+    });
+    } else {
+      debugPrint('⚠️ Cannot go to previous day: Already at earliest date ($earliestDateNormalized)');
+    }
+  }
+  
+  /// Check if previous day button should be enabled
+  bool get _canGoToPreviousDay {
+    final earliestDate = _getEarliestDate();
+    final selectedDateNormalized = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+    final earliestDateNormalized = DateTime(earliestDate.year, earliestDate.month, earliestDate.day);
+    return selectedDateNormalized.isAfter(earliestDateNormalized);
+  }
+
+  /// Navigate to next day
+  void _goToNextDay() {
+    setState(() {
+      _selectedDate = _selectedDate.add(const Duration(days: 1));
+    });
+  }
+
+  /// Get the earliest date (account creation date, which is the absolute minimum)
+  DateTime _getEarliestDate() {
+    // Always use account creation date as the earliest date
+    // If not loaded yet, default to today
+    final accountDate = _accountCreationDate;
+    if (accountDate != null) {
+      return accountDate;
+    }
+    
+    // Fallback: if account date not loaded, use today as minimum
+    final today = DateTime.now();
+    return DateTime(today.year, today.month, today.day);
+  }
+
+  /// Get the latest date (furthest future date from projects or reasonable limit)
+  DateTime _getLatestDate(TasksController controller) {
+    // Check for project end dates
+    DateTime? latestDate;
+    
+    // Check active projects for their end dates
+    try {
+      final projectsController = context.read<ProjectsController>();
+      for (var project in projectsController.projects) {
+        if (project.status == 'active' && project.endDate.isAfter(DateTime.now())) {
+          if (latestDate == null || project.endDate.isAfter(latestDate)) {
+            latestDate = project.endDate;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error getting latest date from projects: $e');
+    }
+    
+    // Default to 1 year from now if no projects
+    return latestDate ?? DateTime.now().add(const Duration(days: 365));
+  }
+
+  /// Get project tasks for a specific date
+  // ignore: unused_element
+  List<ProjectTaskModel> _getProjectTasksForDate(TasksController controller, DateTime date) {
+    try {
+      final projectsController = context.read<ProjectsController>();
+      final dateStart = DateTime(date.year, date.month, date.day);
+      final dateEnd = dateStart.add(const Duration(days: 1));
+      
+      final tasks = <ProjectTaskModel>[];
+      
+      for (var project in projectsController.projects) {
+        if (project.status != 'active') continue;
+        
+        for (var milestone in project.milestones) {
+          for (var task in milestone.tasks) {
+            if (task.dueDate != null &&
+                task.dueDate!.isAfter(dateStart) &&
+                task.dueDate!.isBefore(dateEnd) &&
+                task.status != 'done') {
+              tasks.add(task);
+            }
+          }
+        }
+      }
+      
+      return tasks;
+    } catch (e) {
+      debugPrint('Error getting project tasks: $e');
+      return [];
+    }
+  }
+
+  /// Show date picker to jump to any date
+  Future<void> _showDatePicker(BuildContext context, TasksController controller) async {
+    final earliestDate = _getEarliestDate();
+    final latestDate = _getLatestDate(controller);
+    
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: earliestDate,
+      lastDate: latestDate,
+      helpText: 'Select Date',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: Colors.orange,
+              onPrimary: Colors.white,
+              surface: Color(0xFF1A1A1A),
+              onSurface: Colors.white,
+            ),
+            dialogTheme: const DialogThemeData(
+              backgroundColor: Color(0xFF0D0D0F),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    
+    if (picked != null) {
+      final earliestDate = _getEarliestDate();
+      final pickedNormalized = DateTime(picked.year, picked.month, picked.day);
+      final earliestNormalized = DateTime(earliestDate.year, earliestDate.month, earliestDate.day);
+      
+      // Ensure picked date is not before account creation date
+      if (pickedNormalized.isBefore(earliestNormalized)) {
+        // Show error and don't change date
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Cannot select date before account creation (${_getMonthName(earliestDate.month)} ${earliestDate.day}, ${earliestDate.year})',
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+      
+      setState(() {
+        _selectedDate = pickedNormalized;
+      });
+    }
+  }
+
+  /// Calculate day number based on milestone start date
+  int _calculateDayNumber(DateTime date, MilestoneController milestoneController, JourneyController journeyController) {
+    // Try to get milestone start date
+    final milestone = milestoneController.currentMilestone;
+    if (milestone != null && milestone.isActive) {
+      final difference = date.difference(milestone.startDate).inDays;
+      return (difference + 1).clamp(1, milestone.totalDays);
+    }
+    
+    // Fallback: calculate from journey current day
+    // Get the journey start date by working backwards from current day
+    final currentDay = journeyController.currentDay;
+    if (currentDay > 0) {
+      final today = DateTime.now();
+      final journeyStartDate = today.subtract(Duration(days: currentDay - 1));
+      final difference = date.difference(journeyStartDate).inDays;
+      return (difference + 1).clamp(1, 999); // No upper limit for journey
+    }
+    
+    // Default: calculate from today
+    final today = DateTime.now();
+    final difference = date.difference(today).inDays;
+    return (difference + 1).clamp(1, 999);
+  }
+
+  /// Get motivational message based on selected date
+  String _getMotivationalMessage(int dayNumber, DateTime selectedDate) {
+    final today = DateTime.now();
+    final isToday = selectedDate.year == today.year && 
+                    selectedDate.month == today.month && 
+                    selectedDate.day == today.day;
+    
+    if (isToday) {
+      if (dayNumber == 1) {
+        return "It's your first day. Don't screw it.";
+      } else {
+        return "Keep going, you're doing great!";
+      }
+    } else if (selectedDate.isBefore(today)) {
+      return "Well done, you conquered the day!";
+    } else {
+      return "You are going to make it.";
+    }
+  }
+
+  /// Check if selected date is today
+  bool _isToday(DateTime selectedDate) {
+    final today = DateTime.now();
+    return selectedDate.year == today.year && 
+           selectedDate.month == today.month && 
+           selectedDate.day == today.day;
+  }
+
+  /// Get day name from date
+  String _getDayName(DateTime date) {
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    return days[date.weekday - 1];
+  }
+
+  /// Get month name from date
+  String _getMonthName(int month) {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return months[month - 1];
+  }
+
+  /// Build date display widget
+  Widget _buildDateDisplay(DateTime selectedDate) {
+    final isToday = _isToday(selectedDate);
+    
+    if (isToday) {
+      return const Text(
+        "Today",
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+        textAlign: TextAlign.center,
+      );
+    } else {
+      final dayName = _getDayName(selectedDate);
+      final monthName = _getMonthName(selectedDate.month);
+      
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Day name on first line
+          Text(
+            dayName,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          // Date on second line
+          Text(
+            '$monthName ${selectedDate.day}, ${selectedDate.year}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      );
+    }
   }
 
   @override
@@ -47,14 +395,55 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
             );
           }
 
-          // Get all habits (not filtered by category)
-          final allHabits = controller.habits;
+          // Only show habits scheduled for the selected date
+          // Also filter out any dates before account creation
+          if (_accountCreationDate != null) {
+            final selectedDateNormalized = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+            final accountDateNormalized = DateTime(_accountCreationDate!.year, _accountCreationDate!.month, _accountCreationDate!.day);
+            
+            // If selected date is before account creation, show no tasks
+            if (selectedDateNormalized.isBefore(accountDateNormalized)) {
+              debugPrint('🚫 Blocked: Selected date $selectedDateNormalized is before account creation $accountDateNormalized');
+              return Column(
+                children: [
+                  _buildNewHeaderSection(controller, 0, 0, 0, _selectedDate),
+                  Expanded(
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.calendar_today,
+                            size: 64,
+                            color: Colors.white54,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No tasks available before ${_getMonthName(_accountCreationDate!.month)} ${_accountCreationDate!.day}, ${_accountCreationDate!.year}',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 16,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }
+          }
+          
+          final scheduledHabits = controller.habits
+              .where((habit) => habit.isScheduledForDate(_selectedDate))
+              .toList();
 
-          if (allHabits.isEmpty) {
+          if (scheduledHabits.isEmpty) {
             return Column(
               children: [
                 // Header section even when no tasks
-                _buildNewHeaderSection(controller, 0, 0, 0),
+                _buildNewHeaderSection(controller, 0, 0, 0, _selectedDate),
                 Expanded(
                   child: Center(
                     child: Column(
@@ -89,10 +478,20 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
             );
           }
           
-          // Filter habits based on selected filter (To-dos, Done, Skipped)
-          final todos = allHabits.where((h) => !h.isCompletedToday() && !h.isSkippedToday()).toList();
-          final done = allHabits.where((h) => h.isCompletedToday()).toList();
-          final skipped = allHabits.where((h) => h.isSkippedToday()).toList();
+          // Filter habits based on selected filter and selected date
+          // Note: Project tasks integration will be added in future update
+          // final projectTasks = _getProjectTasksForDate(controller, _selectedDate);
+          final todos = scheduledHabits.where((h) => !h.isCompletedForDate(_selectedDate) && !h.isSkippedForDate(_selectedDate)).toList();
+          final done = scheduledHabits.where((h) => h.isCompletedForDate(_selectedDate)).toList();
+          final skipped = scheduledHabits.where((h) => h.isSkippedForDate(_selectedDate)).toList();
+          
+          // Count todos excluding tasks with pending deletion (they show but don't count)
+          final todosCount = todos.where((h) => h.deletionStatus != "pending").length;
+          final doneCount = done.length;
+          final skippedCount = skipped.length;
+          
+          // Combine regular habits with project tasks for display
+          // Project tasks will be shown as additional tasks for that date
           
           final displayHabits = _selectedFilter == "To-dos" 
               ? todos 
@@ -103,7 +502,8 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
           return Column(
             children: [
               // Header section with stats, day counter, and task filters
-              _buildNewHeaderSection(controller, todos.length, done.length, skipped.length),
+              // Use separate counts that exclude pending deletion tasks from todos count
+              _buildNewHeaderSection(controller, todosCount, doneCount, skippedCount, _selectedDate),
               
               // Tasks list
               Expanded(
@@ -112,23 +512,43 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(
-                              Icons.task_alt,
-                              size: 64,
-                              color: Colors.white54,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              _selectedFilter == "To-dos" 
-                                  ? 'No tasks to do'
-                                  : _selectedFilter == "Done"
-                                      ? 'No completed tasks'
-                                      : 'No skipped tasks',
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 18,
+                            if (_selectedFilter == "To-dos" && todos.isEmpty && done.isNotEmpty) ...[
+                              // All tasks completed message
+                              const Icon(
+                                Icons.check_circle,
+                                size: 64,
+                                color: Colors.green,
                               ),
-                            ),
+                              const SizedBox(height: 16),
+                              const Text(
+                                'You have finished all tasks for this day.',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ] else ...[
+                              // No tasks message
+                              const Icon(
+                                Icons.task_alt,
+                                size: 64,
+                                color: Colors.white54,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                _selectedFilter == "To-dos" 
+                                    ? 'No tasks to do'
+                                    : _selectedFilter == "Done"
+                                        ? 'No completed tasks'
+                                        : 'No skipped tasks',
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       )
@@ -161,8 +581,20 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
   }
 
   // ✅ When user taps on a habit card - always navigate to detail screen
-  void _handleHabitTap(BuildContext context, HabitModel habit, TasksController controller) {
-    Navigator.pushNamed(context, '/task_detail', arguments: habit);
+  void _handleHabitTap(BuildContext context, HabitModel habit, TasksController controller) async {
+    await Navigator.pushNamed(
+      context, 
+      '/task_detail', 
+      arguments: {
+        'habit': habit,
+        'viewDate': _selectedDate, // Pass the selected date
+      },
+    );
+    
+    // Reload habits when returning from detail screen to get latest deletionStatus
+    if (mounted) {
+      await controller.reloadHabits();
+    }
   }
 
   // ✅ Show task information dialog when info icon is clicked
@@ -352,30 +784,35 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
   }
 
 
-  Widget _buildNewHeaderSection(TasksController controller, int todosCount, int doneCount, int skippedCount) {
+  Widget _buildNewHeaderSection(TasksController controller, int todosCount, int doneCount, int skippedCount, DateTime selectedDate) {
     return Consumer3<ProgressController, MilestoneController, AchievementsController>(
       builder: (context, progressController, milestoneController, achievementsController, child) {
         final journeyController = context.read<JourneyController>();
-        final currentDay = journeyController.currentDay;
         final overallProgress = progressController.overallProgress;
-        final totalDays = milestoneController.getTotalDays();
+        
+        // Calculate day number for selected date
+        final dayNumber = _calculateDayNumber(selectedDate, milestoneController, journeyController);
         
         // Get real achievements count
         final achievementsCount = achievementsController.unlockedCount;
         final successRate = (overallProgress * 100).toInt();
 
-        // Calculate current streak and today's task completion
+        // Calculate current streak and selected date's task completion
         final streakInfo = _calculateCurrentStreak(controller.habits);
         final currentStreak = streakInfo['streak'] as int;
-        final todayTasksCompleted = streakInfo['todayTasksCompleted'] as int;
         
-        // Determine color based on today's task completion
+        // Calculate tasks completed for selected date
+        final selectedDateTasksCompleted = controller.habits
+            .where((h) => h.isCompletedForDate(selectedDate))
+            .length;
+        
+        // Determine color based on selected date's task completion
         Color streakColor = Colors.grey;
-        if (todayTasksCompleted >= 7) {
+        if (selectedDateTasksCompleted >= 7) {
           streakColor = Colors.red;
-        } else if (todayTasksCompleted >= 6) {
+        } else if (selectedDateTasksCompleted >= 6) {
           streakColor = Colors.orange;
-        } else if (todayTasksCompleted >= 5) {
+        } else if (selectedDateTasksCompleted >= 5) {
           streakColor = Colors.green;
         }
 
@@ -463,22 +900,49 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
                   ),
                   const SizedBox(height: 12),
                   
-                  // Day counter
-                  Text(
-                    "Day $currentDay/$totalDays",
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  // Day counter with navigation - cleaner design
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Previous day button
+                      IconButton(
+                        onPressed: _canGoToPreviousDay ? _goToPreviousDay : null,
+                        icon: Icon(
+                          Icons.chevron_left,
+                          color: _canGoToPreviousDay ? Colors.white : Colors.white.withValues(alpha: 0.3),
+                          size: 28,
+                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                      const SizedBox(width: 8),
+                      // Day counter - tappable to open date picker (flexible size)
+                      Expanded(
+                        child: GestureDetector(
+                        onTap: () => _showDatePicker(context, controller),
+                          child: _buildDateDisplay(selectedDate),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Next day button
+                      IconButton(
+                        onPressed: _goToNextDay,
+                        icon: const Icon(
+                          Icons.chevron_right,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 4),
                   
                   // Motivational message
                   Text(
-                    currentDay == 1 
-                        ? "It's your first day. Don't screw it."
-                        : "Keep going, you're doing great!",
+                    _getMotivationalMessage(dayNumber, selectedDate),
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.8),
                       fontSize: 16,
@@ -608,31 +1072,17 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
     required TasksController controller,
     required BuildContext context,
   }) {
-    // Get appropriate background gradient based on task type
-    List<Color> getBackgroundGradient() {
-      final title = habit.title.toLowerCase();
-      if (title.contains('meditate') || title.contains('meditation')) {
-        return [const Color(0xFF6B4E71), const Color(0xFF8B6F8F)];
-      } else if (title.contains('water') || title.contains('drink')) {
-        return [const Color(0xFF4A90E2), const Color(0xFF6BA3E8)];
-      } else if (title.contains('exercise') || title.contains('workout')) {
-        return [const Color(0xFFE74C3C), const Color(0xFFEC7063)];
-      } else if (title.contains('read') || title.contains('reading')) {
-        return [const Color(0xFF8E44AD), const Color(0xFFA569BD)];
-      } else if (title.contains('wake') || title.contains('sleep')) {
-        return [const Color(0xFFFFA500), const Color(0xFFFFB84D)];
-      }
-      return [const Color(0xFF34495E), const Color(0xFF5D6D7E)];
-    }
-
-    // Get frequency text - defaults to "Everyday" for all tasks
-    String getFrequency() {
-      // Frequency can be added to HabitModel in the future
-      return "Everyday";
-    }
-
-    final gradient = getBackgroundGradient();
-    final frequency = getFrequency();
+    // Get attribute from habit (from database) or determine it
+    final attribute = habit.attribute ?? AttributeUtils.determineAttribute(
+      title: habit.title,
+      description: habit.description,
+      category: '', // HabitModel doesn't have category, use empty string
+    );
+    
+    // Get background gradient and color using centralized utility
+    final gradient = AttributeUtils.getAttributeGradient(attribute);
+    final attributeColor = AttributeUtils.getAttributeColor(attribute);
+    final frequency = "Everyday"; // Frequency can be added to HabitModel in the future
 
     return GestureDetector(
       onTap: () => _handleHabitTap(context, habit, controller),
@@ -685,6 +1135,16 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
                       Expanded(
                         child: Row(
                           children: [
+                            // Attribute color indicator
+                            Container(
+                              width: 4,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: attributeColor,
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
                             Expanded(
                               child: Text(
                                 habit.title,
@@ -708,6 +1168,28 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
                                   Icons.verified_user,
                                   color: Colors.white,
                                   size: 16,
+                                ),
+                              ),
+                            // Pending deletion indicator - more visible
+                            if (habit.deletionStatus == "pending")
+                              Tooltip(
+                                message: "Deletion request pending",
+                                child: Container(
+                                  margin: const EdgeInsets.only(left: 8),
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.withValues(alpha: 0.5),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.orange,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.delete_outline,
+                                    color: Colors.orange,
+                                    size: 18,
+                                  ),
                                 ),
                               ),
                           ],

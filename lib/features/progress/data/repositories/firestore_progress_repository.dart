@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../../../models/progress_model.dart';
+import 'package:recalim/core/models/progress_model.dart';
 import '../../domain/repositories/progress_repository.dart';
 
 /// Firestore implementation of ProgressRepository

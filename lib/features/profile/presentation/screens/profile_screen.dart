@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../models/user_model.dart';
+import 'package:recalim/core/models/user_model.dart';
 
 class ProfileScreen extends StatefulWidget {
   final UserModel user;

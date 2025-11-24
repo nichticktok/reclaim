@@ -1,0 +1,154 @@
+openapi: 3.0.3
+info:
+  title: Recalim User Profile Service API
+  version: "1.0.0"
+  description: CRUD for user profile, subscription, achievements, and rating data.
+servers:
+  - url: https://api.recalim.com/profile
+paths:
+  /profiles/{userId}:
+    get:
+      summary: Fetch profile details
+      tags: [profile]
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      responses:
+        "200":
+          description: Profile found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        "404":
+          description: User not found
+    patch:
+      summary: Update profile attributes
+      tags: [profile]
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserProfileUpdate'
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+  /profiles/{userId}/subscription:
+    get:
+      summary: Retrieve subscription state
+      tags: [subscription]
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      responses:
+        "200":
+          description: Subscription details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+    post:
+      summary: Start or change subscription plan
+      tags: [subscription]
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionRequest'
+      responses:
+        "202":
+          description: Subscription change accepted
+  /profiles/{userId}/achievements:
+    get:
+      summary: List achievements for a user
+      tags: [achievements]
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      responses:
+        "200":
+          description: List of achievements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Achievement'
+components:
+  parameters:
+    UserIdParam:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    UserProfile:
+      type: object
+      required: [id, displayName, avatarUrl, stats]
+      properties:
+        id:
+          type: string
+        displayName:
+          type: string
+        avatarUrl:
+          type: string
+        stats:
+          type: object
+          additionalProperties:
+            type: number
+        bio:
+          type: string
+        preferences:
+          type: object
+          additionalProperties: true
+    UserProfileUpdate:
+      type: object
+      properties:
+        displayName:
+          type: string
+        avatarUrl:
+          type: string
+        bio:
+          type: string
+        preferences:
+          type: object
+          additionalProperties: true
+    Subscription:
+      type: object
+      properties:
+        planId:
+          type: string
+        status:
+          type: string
+          enum: [active, past_due, canceled, trialing]
+        renewalDate:
+          type: string
+          format: date-time
+    SubscriptionRequest:
+      type: object
+      required: [planId, paymentMethodId]
+      properties:
+        planId:
+          type: string
+        paymentMethodId:
+          type: string
+    Achievement:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        unlockedAt:
+          type: string
+          format: date-time
+

@@ -1,0 +1,106 @@
+openapi: 3.0.3
+info:
+  title: Recalim Reporting Service API
+  version: "1.0.0"
+  description: Aggregated analytics endpoints powering progress dashboards and ratings.
+servers:
+  - url: https://api.recalim.com/reporting
+paths:
+  /progress/{userId}:
+    get:
+      summary: Fetch time-series progress metrics
+      tags: [progress]
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - in: query
+          name: interval
+          schema:
+            type: string
+            enum: [daily, weekly, monthly]
+      responses:
+        "200":
+          description: Series data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressSeries'
+  /leaderboards:
+    get:
+      summary: Retrieve leaderboard snapshots
+      tags: [leaderboards]
+      parameters:
+        - in: query
+          name: metric
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Leaderboard entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LeaderboardEntry'
+  /ratings/{userId}:
+    get:
+      summary: Get rating summaries for a user
+      tags: [ratings]
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        "200":
+          description: Rating info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RatingSummary'
+components:
+  parameters:
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    ProgressSeries:
+      type: object
+      properties:
+        metric:
+          type: string
+        points:
+          type: array
+          items:
+            type: object
+            properties:
+              timestamp:
+                type: string
+                format: date-time
+              value:
+                type: number
+    LeaderboardEntry:
+      type: object
+      properties:
+        rank:
+          type: integer
+        userId:
+          type: string
+        displayName:
+          type: string
+        value:
+          type: number
+    RatingSummary:
+      type: object
+      properties:
+        overall:
+          type: number
+        components:
+          type: object
+          additionalProperties:
+            type: number
+

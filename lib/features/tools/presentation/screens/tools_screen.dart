@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../projects/presentation/screens/plans_list_screen.dart';
+import 'screen_blocker_screen.dart';
 
 class ToolsScreen extends StatelessWidget {
   const ToolsScreen({super.key});
@@ -77,6 +79,14 @@ class ToolsScreen extends StatelessWidget {
                   subtitle: "Control app usage",
                   gradient: [const Color(0xFF34495E), const Color(0xFF5D6D7E)],
                   icon: Icons.phone_android,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ScreenBlockerScreen(),
+                      ),
+                    );
+                  },
                 ),
                 _buildToolCard(
                   context: context,
@@ -91,6 +101,41 @@ class ToolsScreen extends StatelessWidget {
                   subtitle: "Track your workouts",
                   gradient: [const Color(0xFFFF6B35), const Color(0xFFFF8C5A)],
                   icon: Icons.fitness_center,
+                ),
+                _buildToolCard(
+                  context: context,
+                  title: "Project Planner",
+                  subtitle: "AI-assisted project planning",
+                  gradient: [const Color(0xFF9C27B0), const Color(0xFFBA68C8)],
+                  icon: Icons.rocket_launch,
+                  onTap: () {
+                    Navigator.pushNamed(context, '/create_project');
+                  },
+                ),
+                _buildToolCard(
+                  context: context,
+                  title: "View Plans",
+                  subtitle: "See your project roadmaps",
+                  gradient: [const Color(0xFFFF9800), const Color(0xFFFFB74D)],
+                  icon: Icons.map_outlined,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const PlansListScreen(),
+                      ),
+                    );
+                  },
+                ),
+                _buildToolCard(
+                  context: context,
+                  title: "Workout AI",
+                  subtitle: "Personalized fitness plans",
+                  gradient: [const Color(0xFFFF6B35), const Color(0xFFFF8C5A)],
+                  icon: Icons.fitness_center,
+                  onTap: () {
+                    Navigator.pushNamed(context, '/workout_setup');
+                  },
                 ),
                 _buildNewToolCard(context),
               ],
@@ -107,9 +152,10 @@ class ToolsScreen extends StatelessWidget {
     required String subtitle,
     required List<Color> gradient,
     required IconData icon,
+    VoidCallback? onTap,
   }) {
     return GestureDetector(
-      onTap: () {
+      onTap: onTap ?? () {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("$title tool coming soon! 🛠️"),

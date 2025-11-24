@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../../../models/user_model.dart';
+import 'package:recalim/core/models/user_model.dart';
 import '../../domain/repositories/user_repository.dart';
 
 /// Firestore implementation of UserRepository
@@ -50,11 +50,18 @@ class FirestoreUserRepository implements UserRepository {
     final snap = await userRef.get();
     
     if (!snap.exists) {
-      await userRef.set(userData, SetOptions(merge: true));
-    } else {
       await userRef.set({
-        'lastSeen': FieldValue.serverTimestamp()
+        ...userData,
+        'createdAt': FieldValue.serverTimestamp(),
+        'lastSeen': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
+    } else {
+      // Update existing document
+      final updateData = <String, dynamic>{
+        'lastSeen': FieldValue.serverTimestamp(),
+      };
+      updateData.addAll(userData);
+      await userRef.update(updateData);
     }
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../../core/attributes/attribute_service.dart';
 
 class RatingScreen extends StatefulWidget {
   const RatingScreen({super.key});
@@ -31,7 +32,23 @@ class _RatingScreenState extends State<RatingScreen> {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
-      // Load current ratings from user stats
+      // Use AttributeService to calculate current ratings
+      final attributeService = AttributeService();
+      final calculatedRatings = await attributeService.calculateUserAttributes();
+      
+      // Convert to int map
+      _currentRatings = {
+        'wisdom': calculatedRatings['wisdom']?.round() ?? 40,
+        'confidence': calculatedRatings['confidence']?.round() ?? 40,
+        'strength': calculatedRatings['strength']?.round() ?? 40,
+        'discipline': calculatedRatings['discipline']?.round() ?? 40,
+        'focus': calculatedRatings['focus']?.round() ?? 40,
+      };
+
+      // Also update Firestore with calculated ratings
+      await attributeService.updateUserRatings();
+
+      // Load Day 1 ratings (from onboarding)
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -39,15 +56,6 @@ class _RatingScreenState extends State<RatingScreen> {
 
       if (userDoc.exists) {
         final data = userDoc.data();
-        final ratings = data?['ratings'] as Map<String, dynamic>? ?? {};
-        
-        _currentRatings = {
-          'wisdom': (ratings['wisdom'] ?? 40) as int,
-          'confidence': (ratings['confidence'] ?? 40) as int,
-          'strength': (ratings['strength'] ?? 40) as int,
-          'discipline': (ratings['discipline'] ?? 40) as int,
-          'focus': (ratings['focus'] ?? 40) as int,
-        };
 
         // Load Day 1 ratings (from onboarding)
         final onboardingData = data?['onboardingData'] as Map<String, dynamic>? ?? {};
@@ -273,44 +281,59 @@ class _RatingScreenState extends State<RatingScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Column(
                         children: [
-                          _buildAttributeItem(
-                            'Wisdom',
-                            _getSelectedRatings()?['wisdom'] ?? 0,
-                            Icons.psychology,
-                            const Color(0xFF9C27B0),
-                            _getRatingChange('wisdom'),
+                          GestureDetector(
+                            onTap: () => _showAttributeDetails(context, 'Wisdom', _getSelectedRatings()?['wisdom'] ?? 0, const Color(0xFF9C27B0)),
+                            child: _buildAttributeItem(
+                              'Wisdom',
+                              _getSelectedRatings()?['wisdom'] ?? 0,
+                              Icons.psychology,
+                              const Color(0xFF9C27B0),
+                              _getRatingChange('wisdom'),
+                            ),
                           ),
                           const SizedBox(height: 16),
-                          _buildAttributeItem(
-                            'Confidence',
-                            _getSelectedRatings()?['confidence'] ?? 0,
-                            Icons.self_improvement,
-                            const Color(0xFF4CAF50),
-                            _getRatingChange('confidence'),
+                          GestureDetector(
+                            onTap: () => _showAttributeDetails(context, 'Confidence', _getSelectedRatings()?['confidence'] ?? 0, const Color(0xFF4CAF50)),
+                            child: _buildAttributeItem(
+                              'Confidence',
+                              _getSelectedRatings()?['confidence'] ?? 0,
+                              Icons.self_improvement,
+                              const Color(0xFF4CAF50),
+                              _getRatingChange('confidence'),
+                            ),
                           ),
                           const SizedBox(height: 16),
-                          _buildAttributeItem(
-                            'Strength',
-                            _getSelectedRatings()?['strength'] ?? 0,
-                            Icons.fitness_center,
-                            const Color(0xFFFF9800),
-                            _getRatingChange('strength'),
+                          GestureDetector(
+                            onTap: () => _showAttributeDetails(context, 'Strength', _getSelectedRatings()?['strength'] ?? 0, const Color(0xFFFF9800)),
+                            child: _buildAttributeItem(
+                              'Strength',
+                              _getSelectedRatings()?['strength'] ?? 0,
+                              Icons.fitness_center,
+                              const Color(0xFFFF9800),
+                              _getRatingChange('strength'),
+                            ),
                           ),
                           const SizedBox(height: 16),
-                          _buildAttributeItem(
-                            'Discipline',
-                            _getSelectedRatings()?['discipline'] ?? 0,
-                            Icons.lock,
-                            const Color(0xFF2196F3),
-                            _getRatingChange('discipline'),
+                          GestureDetector(
+                            onTap: () => _showAttributeDetails(context, 'Discipline', _getSelectedRatings()?['discipline'] ?? 0, const Color(0xFF2196F3)),
+                            child: _buildAttributeItem(
+                              'Discipline',
+                              _getSelectedRatings()?['discipline'] ?? 0,
+                              Icons.lock,
+                              const Color(0xFF2196F3),
+                              _getRatingChange('discipline'),
+                            ),
                           ),
                           const SizedBox(height: 16),
-                          _buildAttributeItem(
-                            'Focus',
-                            _getSelectedRatings()?['focus'] ?? 0,
-                            Icons.center_focus_strong,
-                            const Color(0xFF00BCD4),
-                            _getRatingChange('focus'),
+                          GestureDetector(
+                            onTap: () => _showAttributeDetails(context, 'Focus', _getSelectedRatings()?['focus'] ?? 0, const Color(0xFF00BCD4)),
+                            child: _buildAttributeItem(
+                              'Focus',
+                              _getSelectedRatings()?['focus'] ?? 0,
+                              Icons.center_focus_strong,
+                              const Color(0xFF00BCD4),
+                              _getRatingChange('focus'),
+                            ),
                           ),
                         ],
                       ),
@@ -404,6 +427,10 @@ class _RatingScreenState extends State<RatingScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.05),
+          width: 1,
+        ),
       ),
       child: Row(
         children: [
@@ -466,6 +493,272 @@ class _RatingScreenState extends State<RatingScreen> {
         ],
       ),
     );
+  }
+
+  void _showAttributeDetails(BuildContext context, String attributeName, int score, Color attributeColor) {
+    // Define what contributes to each attribute
+    final Map<String, Map<String, String>> attributeInfo = {
+      'Wisdom': {
+        'description': 'Measures your commitment to learning, self-reflection, and knowledge growth.',
+        'readingMinutes': 'Read books, articles, or educational content (30% weight)',
+        'meditationMinutes': 'Meditate regularly to improve mindfulness (25% weight)',
+        'reflectionCount': 'Complete reflections on your progress (20% weight)',
+        'tasksCompleted': 'Complete tasks consistently (15% weight)',
+        'achievementsUnlocked': 'Unlock achievements to track progress (10% weight)',
+      },
+      'Confidence': {
+        'description': 'Measures your social engagement, achievement recognition, and self-belief.',
+        'socialInteractions': 'Engage with the community - post, comment, interact (30% weight)',
+        'achievementsUnlocked': 'Unlock achievements to build confidence (25% weight)',
+        'currentStreak': 'Maintain your daily streak (20% weight)',
+        'taskCompletionRate': 'Complete tasks consistently (15% weight)',
+        'reflectionCount': 'Reflect on your progress and growth (10% weight)',
+      },
+      'Strength': {
+        'description': 'Measures your physical activity, workout consistency, and proof submission.',
+        'workoutMinutes': 'Exercise and workout regularly (40% weight)',
+        'currentStreak': 'Maintain your daily streak (25% weight)',
+        'proofSubmitted': 'Submit proof for tasks requiring verification (20% weight)',
+        'consistencyScore': 'Be consistent with your routine (15% weight)',
+      },
+      'Discipline': {
+        'description': 'Measures your consistency, long-term commitment, and ability to maintain streaks.',
+        'currentStreak': 'Maintain your current daily streak (30% weight)',
+        'longestStreak': 'Build your longest streak record (25% weight)',
+        'consistencyScore': 'Be consistent day-to-day (25% weight)',
+        'taskCompletionRate': 'Complete tasks regularly (20% weight)',
+      },
+      'Focus': {
+        'description': 'Measures your ability to complete tasks, maintain concentration, and stay focused.',
+        'taskCompletionRate': 'Complete tasks consistently with high completion rate (30% weight)',
+        'meditationMinutes': 'Meditate to improve concentration (25% weight)',
+        'consistencyScore': 'Maintain consistency in your routine (25% weight)',
+        'tasksCompleted': 'Complete more tasks overall (20% weight)',
+      },
+    };
+
+    final info = attributeInfo[attributeName] ?? {};
+    final description = info['description'] ?? '';
+    final contributors = info.entries
+        .where((e) => e.key != 'description')
+        .map((e) => MapEntry(e.key, e.value))
+        .toList()
+      ..sort((a, b) {
+        // Sort by weight percentage (extract from string)
+        final aWeight = double.tryParse(a.value.split('%')[0].split('(').last) ?? 0;
+        final bWeight = double.tryParse(b.value.split('%')[0].split('(').last) ?? 0;
+        return bWeight.compareTo(aWeight); // Descending order
+      });
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.75,
+        decoration: const BoxDecoration(
+          color: Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            // Handle bar
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: attributeColor.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      _getAttributeIcon(attributeName),
+                      color: attributeColor,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          attributeName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'Score: $score',
+                          style: TextStyle(
+                            color: attributeColor,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(color: Colors.white24, height: 1),
+            // Content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Description
+                    Text(
+                      description,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        fontSize: 16,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    // How to improve section
+                    Text(
+                      'How to Improve $attributeName:',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Contributors list
+                    ...contributors.map((contributor) {
+                      final description = contributor.value;
+                      final weightMatch = RegExp(r'\((\d+)%').firstMatch(description);
+                      final weight = weightMatch?.group(1) ?? '0';
+                      
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2A2A2A),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: attributeColor.withValues(alpha: 0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Weight badge
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: attributeColor.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '$weight%',
+                                style: TextStyle(
+                                  color: attributeColor,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // Description
+                            Expanded(
+                              child: Text(
+                                description,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 20),
+                    // Tips section
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: attributeColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: attributeColor.withValues(alpha: 0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.lightbulb_outline,
+                            color: attributeColor,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Focus on the highest weighted activities first for maximum impact!',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.9),
+                                fontSize: 14,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _getAttributeIcon(String attributeName) {
+    switch (attributeName) {
+      case 'Wisdom':
+        return Icons.psychology;
+      case 'Confidence':
+        return Icons.self_improvement;
+      case 'Strength':
+        return Icons.fitness_center;
+      case 'Discipline':
+        return Icons.lock;
+      case 'Focus':
+        return Icons.center_focus_strong;
+      default:
+        return Icons.info;
+    }
   }
 }
 

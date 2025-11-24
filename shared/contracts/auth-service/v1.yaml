@@ -1,0 +1,83 @@
+openapi: 3.0.3
+info:
+  title: Recalim Auth Service API
+  version: "1.0.0"
+  description: >
+    OTP-based authentication, session issuance, and token verification.
+servers:
+  - url: https://api.recalim.com/auth
+paths:
+  /otp:
+    post:
+      summary: Request a one-time login code
+      tags: [identity]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpRequest'
+      responses:
+        "202":
+          description: Code dispatched successfully.
+        "400":
+          $ref: '#/components/responses/BadRequest'
+  /otp/verify:
+    post:
+      summary: Verify OTP and exchange for JWT
+      tags: [identity]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpVerify'
+      responses:
+        "200":
+          description: JWT issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthToken'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+components:
+  schemas:
+    OtpRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+    OtpVerify:
+      type: object
+      required: [email, code]
+      properties:
+        email:
+          type: string
+          format: email
+        code:
+          type: string
+          minLength: 6
+          maxLength: 6
+    AuthToken:
+      type: object
+      properties:
+        token:
+          type: string
+          description: Signed JWT for downstream services
+        refreshToken:
+          type: string
+          description: Long-lived refresh token
+        expiresIn:
+          type: integer
+          description: Expiry in seconds
+  responses:
+    BadRequest:
+      description: Invalid payload
+    Unauthorized:
+      description: OTP invalid or expired
+

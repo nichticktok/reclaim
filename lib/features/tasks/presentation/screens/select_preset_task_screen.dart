@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../../models/preset_task_model.dart';
+import 'package:recalim/core/models/preset_task_model.dart';
+import '../../../../core/utils/attribute_utils.dart';
 import '../controllers/tasks_controller.dart';
+import 'task_customization_screen.dart';
 
 class SelectPresetTaskScreen extends StatelessWidget {
   final TasksController controller;
@@ -39,7 +41,7 @@ class SelectPresetTaskScreen extends StatelessWidget {
             );
           }
 
-          // Group by category
+          // Group by category (original categories)
           final categories = <String, List<PresetTaskModel>>{};
           for (var task in controller.presetTasks) {
             categories.putIfAbsent(task.category, () => []).add(task);
@@ -99,16 +101,28 @@ class SelectPresetTaskScreen extends StatelessWidget {
                           ),
                         ),
                         ...tasks.map((presetTask) {
-                          // Check if user already has this task
-                          final hasTask = controller.habits.any(
-                            (h) => h.title.toLowerCase() == presetTask.title.toLowerCase(),
-                          );
+                          // Check if user already has at least one schedule for this preset
+                          final scheduledCount = controller.habits
+                              .where((habit) => habit.presetTaskId == presetTask.id)
+                              .length;
+                          final hasTask = scheduledCount > 0;
+                          
+                          // Get attribute color for this task (from database or fallback)
+                          final attribute = presetTask.attribute.isNotEmpty 
+                              ? presetTask.attribute 
+                              : AttributeUtils.determineAttribute(
+                                  title: presetTask.title,
+                                  description: presetTask.description,
+                                  category: presetTask.category,
+                                );
+                          final attributeColor = AttributeUtils.getAttributeColor(attribute);
 
                           return _buildPresetTaskCard(
                             context: context,
                             presetTask: presetTask,
                             isAdded: hasTask,
                             controller: controller,
+                            attributeColor: attributeColor,
                           );
                         }),
                       ],
@@ -123,47 +137,58 @@ class SelectPresetTaskScreen extends StatelessWidget {
     );
   }
 
+
   Widget _buildPresetTaskCard({
     required BuildContext context,
     required PresetTaskModel presetTask,
     required bool isAdded,
     required TasksController controller,
+    required Color attributeColor,
   }) {
-    // Get gradient based on category
-    List<Color> getGradient() {
-      final category = presetTask.category.toLowerCase();
-      if (category.contains('health')) {
-        return [const Color(0xFFE74C3C), const Color(0xFFEC7063)];
-      } else if (category.contains('mindfulness')) {
-        return [const Color(0xFF6B4E71), const Color(0xFF8B6F8F)];
-      } else if (category.contains('productivity')) {
-        return [const Color(0xFF8E44AD), const Color(0xFFA569BD)];
-      } else if (category.contains('social')) {
-        return [const Color(0xFF4A90E2), const Color(0xFF6BA3E8)];
-      } else if (category.contains('digital')) {
-        return [const Color(0xFF34495E), const Color(0xFF5D6D7E)];
-      } else if (category.contains('personal')) {
-        return [const Color(0xFFFFA500), const Color(0xFFFFB84D)];
-      } else if (category.contains('self-care')) {
-        return [const Color(0xFF16A085), const Color(0xFF48C9B0)];
-      }
-      return [const Color(0xFF34495E), const Color(0xFF5D6D7E)];
-    }
-
-    final gradient = getGradient();
+    // Create gradient from attribute color using centralized utility
+    final gradient = AttributeUtils.getAttributeGradient(
+      presetTask.attribute.isNotEmpty 
+          ? presetTask.attribute 
+          : AttributeUtils.determineAttribute(
+              title: presetTask.title,
+              description: presetTask.description,
+              category: presetTask.category,
+            ),
+    );
     final proofRequired = controller.hardModeEnabled || presetTask.requiresProof;
 
     return GestureDetector(
-      onTap: isAdded
-          ? null
-          : () async {
+      onTap: () async {
+              final result = await Navigator.push<Map<String, dynamic>>(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => TaskCustomizationScreen(
+                    presetTask: presetTask,
+                  ),
+                ),
+              );
+
+              if (result == null || !context.mounted) return;
+
+        final daysOfWeek = (result['daysOfWeek'] as List<dynamic>?)
+                ?.map((day) => day as int)
+                .toList() ??
+            [];
+
               try {
-                await controller.addPresetTask(presetTask);
+          await controller.addPresetTask(
+            presetTask: presetTask,
+                  title: result['title'] as String,
+                  description: result['description'] as String,
+                  scheduledTime: result['scheduledTime'] as String,
+            daysOfWeek: daysOfWeek,
+                );
+
                 if (!context.mounted) return;
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('${presetTask.title} added! ✅'),
+              content: Text('${result['title']} scheduled! ✅'),
                     backgroundColor: Colors.green,
                   ),
                 );
@@ -171,9 +196,13 @@ class SelectPresetTaskScreen extends StatelessWidget {
                 if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(e.toString().contains('already exists')
-                        ? 'Task already added'
-                        : 'Error adding task'),
+              content: Text(
+                e.toString().contains('Select at least one day')
+                    ? 'Pick at least one day.'
+                    : e.toString().contains('already scheduled')
+                        ? 'You already scheduled this combo.'
+                        : 'Error adding task',
+              ),
                     backgroundColor: Colors.orange,
                   ),
                 );
@@ -213,14 +242,30 @@ class SelectPresetTaskScreen extends StatelessWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: Text(
-                          presetTask.title,
-                          style: TextStyle(
-                            color: isAdded ? Colors.white54 : Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            decoration: isAdded ? TextDecoration.lineThrough : null,
-                          ),
+                        child: Row(
+                          children: [
+                            // Attribute indicator
+                            Container(
+                              width: 4,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: attributeColor,
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                presetTask.title,
+                                style: TextStyle(
+                                  color: isAdded ? Colors.white54 : Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  decoration: isAdded ? TextDecoration.lineThrough : null,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       if (proofRequired)
@@ -250,24 +295,6 @@ class SelectPresetTaskScreen extends StatelessWidget {
                           : Colors.white.withValues(alpha: 0.8),
                       fontSize: 14,
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.access_time,
-                        color: Colors.white.withValues(alpha: 0.7),
-                        size: 16,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        presetTask.scheduledTime,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.7),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
                   ),
                 ],
               ),

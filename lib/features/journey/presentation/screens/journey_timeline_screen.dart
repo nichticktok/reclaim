@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../tasks/presentation/controllers/tasks_controller.dart';
+import '../../../milestone/presentation/controllers/milestone_controller.dart';
 import '../controllers/journey_controller.dart';
+import 'daily_journey_screen.dart';
 
 /// Journey Timeline Screen
-/// Shows timeline view with multiple days, mood tracking, tasks, and journal entries
+/// Shows timeline view with 30 days, mood tracking, tasks, and journal entries
 class JourneyTimelineScreen extends StatefulWidget {
   const JourneyTimelineScreen({super.key});
 
@@ -16,9 +18,17 @@ class _JourneyTimelineScreenState extends State<JourneyTimelineScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize controllers only once - they check internally if already initialized
+    // Initialize controllers
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<JourneyController>().initialize();
+      final journeyController = context.read<JourneyController>();
+      final milestoneController = context.read<MilestoneController>();
+      
+      journeyController.initialize().then((_) {
+        // Get total days from milestone controller
+        final totalDays = milestoneController.getTotalDays();
+        journeyController.loadAllDayEntries(totalDays: totalDays);
+      });
+      
       context.read<TasksController>().initialize();
     });
   }
@@ -55,44 +65,127 @@ class _JourneyTimelineScreenState extends State<JourneyTimelineScreen> {
         elevation: 0,
         foregroundColor: Colors.white,
       ),
-      body: Consumer<JourneyController>(
-        builder: (context, journeyController, child) {
-          if (journeyController.loading) {
+      body: Consumer2<JourneyController, MilestoneController>(
+        builder: (context, journeyController, milestoneController, child) {
+          if (journeyController.loading && journeyController.dayEntries.isEmpty) {
             return const Center(
               child: CircularProgressIndicator(color: Colors.orange),
             );
           }
 
           final currentDay = journeyController.currentDay;
-          final tasksController = context.read<TasksController>();
-          final tasks = tasksController.habits;
+          final totalDays = milestoneController.getTotalDays();
+          final startDate = journeyController.journeyStartDate ?? DateTime.now();
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          return Column(
               children: [
-                // Day 1 (Completed)
-                _buildDayEntry(
-                  dayNumber: 1,
-                  date: DateTime.now().subtract(const Duration(days: 1)),
-                  isCompleted: true,
+              // Progress Header
+              _buildProgressHeader(currentDay, totalDays),
+              
+              // Timeline View
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  itemCount: totalDays,
+                  itemBuilder: (context, index) {
+                    final dayNumber = index + 1;
+                    final dayDate = startDate.add(Duration(days: dayNumber - 1));
+                    final isCompleted = dayNumber < currentDay;
+                    final isCurrent = dayNumber == currentDay;
+                    final isFuture = dayNumber > currentDay;
+                    
+                    final dayEntry = journeyController.dayEntries[dayNumber];
+                    final mood = dayEntry?['mood'] as String?;
+                    final hasJournal = dayEntry?['journalEntry'] != null && 
+                                      (dayEntry?['journalEntry'] as String).isNotEmpty;
+
+                    return _buildDayEntry(
+                      dayNumber: dayNumber,
+                      date: dayDate,
+                      isCompleted: isCompleted,
+                      isCurrent: isCurrent,
+                      isFuture: isFuture,
+                      mood: mood,
+                      hasJournal: hasJournal,
                   journeyController: journeyController,
-                  tasks: tasks,
+                      totalDays: totalDays,
+                      showConnector: index < totalDays - 1,
+                    );
+                  },
                 ),
-                const SizedBox(height: 32),
-                // Day 2 (Current)
-                _buildDayEntry(
-                  dayNumber: currentDay,
-                  date: DateTime.now(),
-                  isCompleted: false,
-                  journeyController: journeyController,
-                  tasks: tasks,
                 ),
               ],
-            ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildProgressHeader(int currentDay, int totalDays) {
+    final progress = (currentDay / totalDays).clamp(0.0, 1.0);
+    
+    return Container(
+      margin: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Day $currentDay of $totalDays',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${(progress * 100).toStringAsFixed(0)}% Complete',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.orange, width: 1),
+                ),
+                child: Text(
+                  '${totalDays - currentDay + 1} days left',
+                  style: const TextStyle(
+                    color: Colors.orange,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 8,
+              backgroundColor: Colors.white.withValues(alpha: 0.1),
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.orange),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -101,45 +194,86 @@ class _JourneyTimelineScreenState extends State<JourneyTimelineScreen> {
     required int dayNumber,
     required DateTime date,
     required bool isCompleted,
+    required bool isCurrent,
+    required bool isFuture,
+    String? mood,
+    required bool hasJournal,
     required JourneyController journeyController,
-    required List tasks,
+    required int totalDays,
+    required bool showConnector,
   }) {
-    return Row(
+    return InkWell(
+      onTap: () {
+        // Navigate to daily journey screen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DailyJourneyScreen(dayNumber: dayNumber),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 24),
+        child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Timeline indicator
         Column(
           children: [
             Container(
-              width: 40,
-              height: 40,
+                  width: 48,
+                  height: 48,
               decoration: BoxDecoration(
-                color: isCompleted ? Colors.orange : Colors.grey.shade700,
-                shape: BoxShape.rectangle,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                Icons.wb_sunny,
+                    color: isCurrent
+                        ? Colors.orange
+                        : isCompleted
+                            ? Colors.green
+                            : Colors.grey.shade700,
+                    shape: BoxShape.circle,
+                    border: Border.all(
                 color: Colors.white,
-                size: 24,
-              ),
-            ),
-            if (dayNumber == 1) // Only show dotted line between days
-              Container(
-                width: 2,
-                height: 100,
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  border: Border(
-                    left: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.3),
                       width: 2,
-                      style: BorderStyle.solid,
+                    ),
+                  ),
+                  child: Center(
+                    child: isCompleted
+                        ? const Icon(Icons.check, color: Colors.white, size: 24)
+                        : isCurrent
+                            ? const Icon(Icons.wb_sunny, color: Colors.white, size: 24)
+                            : Text(
+                                '$dayNumber',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
                     ),
                   ),
                 ),
-                child: CustomPaint(
-                  painter: DottedLinePainter(),
+                if (showConnector)
+                  Container(
+                    width: 2,
+                    height: 60,
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          isCompleted
+                              ? Colors.green
+                              : isCurrent
+                                  ? Colors.orange
+                                  : Colors.grey.shade700,
+                          dayNumber + 1 <= totalDays
+                              ? (dayNumber + 1 == journeyController.currentDay
+                                  ? Colors.orange
+                                  : dayNumber + 1 < journeyController.currentDay
+                                      ? Colors.green
+                                      : Colors.grey.shade700)
+                              : Colors.grey.shade700,
+                        ],
+                      ),
                 ),
               ),
           ],
@@ -147,7 +281,27 @@ class _JourneyTimelineScreenState extends State<JourneyTimelineScreen> {
         const SizedBox(width: 16),
         // Day content
         Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isCurrent
+                      ? Colors.orange.withValues(alpha: 0.1)
+                      : const Color(0xFF1A1A1A),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isCurrent
+                        ? Colors.orange
+                        : Colors.white.withValues(alpha: 0.1),
+                    width: isCurrent ? 2 : 1,
+                  ),
+                ),
           child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
@@ -160,359 +314,145 @@ class _JourneyTimelineScreenState extends State<JourneyTimelineScreen> {
               const SizedBox(height: 4),
               Text(
                 "Day $dayNumber",
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
+                              style: TextStyle(
+                                color: isCurrent ? Colors.orange : Colors.white,
+                                fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 16),
-              // Mood card
-              _buildMoodCard(dayNumber, journeyController),
-              const SizedBox(height: 12),
-              // Tasks card
-              _buildTasksCard(tasks),
-              const SizedBox(height: 12),
-              // Visual journey card
-              _buildVisualJourneyCard(dayNumber),
-              const SizedBox(height: 12),
-              // Text entry card
-              _buildTextEntryCard(dayNumber, journeyController),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMoodCard(int dayNumber, JourneyController controller) {
-    final moods = ['😊', '😄', '😌', '😐', '😔', '😢'];
-    final currentMood = dayNumber == controller.currentDay ? controller.currentMood : null;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
+                          ],
+                        ),
+                        if (isCurrent)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(16),
+                              color: Colors.orange,
+                              borderRadius: BorderRadius.circular(12),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "How are you feeling today?",
+                            child: const Text(
+                              'Today',
             style: TextStyle(
               color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: moods.map((mood) {
-              final isSelected = currentMood == mood;
-              return GestureDetector(
-                onTap: () {
-                  if (dayNumber == controller.currentDay) {
-                    controller.saveMood(mood);
-                  }
-                },
-                child: Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? Colors.orange.withValues(alpha: 0.3)
-                        : Colors.white.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isSelected ? Colors.orange : Colors.transparent,
-                      width: 2,
+                          )
+                        else if (isCompleted)
+                          const Icon(
+                            Icons.check_circle,
+                            color: Colors.green,
+                            size: 24,
+                          ),
+                      ],
                     ),
-                  ),
-                  child: Center(
-                    child: Text(
+                    const SizedBox(height: 12),
+                    // Mood indicator
+                    if (mood != null)
+                      Row(
+                        children: [
+                          Text(
                       mood,
                       style: const TextStyle(fontSize: 24),
                     ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ],
+                          const SizedBox(width: 8),
+                          Text(
+                            _getMoodText(mood),
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.7),
+                              fontSize: 14,
+                            ),
       ),
-    );
-  }
-
-  Widget _buildTasksCard(List tasks) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Tasks",
+                        ],
+                      )
+                    else if (!isFuture)
+                      Text(
+                        'No mood recorded',
             style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
+                          color: Colors.white.withValues(alpha: 0.5),
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
             ),
           ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: tasks.take(5).map((task) {
-              return Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2A2A2A),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    width: 1,
-                  ),
+                    if (hasJournal) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.book,
+                            color: Colors.orange,
+                            size: 16,
                 ),
-                child: Icon(
-                  _getTaskIcon(task.title),
-                  color: Colors.white54,
-                  size: 24,
-                ),
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVisualJourneyCard(int dayNumber) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "The visual journey",
+                          const SizedBox(width: 4),
+                          Text(
+                            'Journal entry saved',
             style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            height: 60,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Media picker coming soon! 📸"),
-                    backgroundColor: Colors.orange,
-                  ),
-                );
-              },
-              icon: const Icon(Icons.add_photo_alternate, color: Colors.white),
-              label: const Text(
-                "Add Media",
-                style: TextStyle(color: Colors.white),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2A2A2A),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
+                              color: Colors.white.withValues(alpha: 0.7),
+                              fontSize: 12,
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildTextEntryCard(int dayNumber, JourneyController controller) {
-    final isCurrentDay = dayNumber == controller.currentDay;
-    final journalEntry = isCurrentDay ? controller.journalEntry : null;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Describe what you're feeling",
+                    ],
+                    if (isFuture)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          'Coming soon...',
             style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            height: 60,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                _showJournalEditor(context, controller, dayNumber);
-              },
-              icon: const Icon(Icons.text_fields, color: Colors.white),
-              label: Text(
-                journalEntry != null ? "Edit Text" : "Add Text",
-                style: const TextStyle(color: Colors.white),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2A2A2A),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                            color: Colors.white.withValues(alpha: 0.5),
+                            fontSize: 12,
+                            fontStyle: FontStyle.italic,
               ),
             ),
           ),
         ],
       ),
-    );
-  }
-
-  void _showJournalEditor(BuildContext context, JourneyController controller, int dayNumber) {
-    final textController = TextEditingController(text: controller.journalEntry ?? '');
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text(
-          "Journal Entry",
-          style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
         ),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: TextField(
-            controller: textController,
-            maxLines: 10,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: "Describe what you're feeling...",
-              hintStyle: const TextStyle(color: Colors.white54),
-              filled: true,
-              fillColor: const Color(0xFF2A2A2A),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Colors.orange, width: 2),
-              ),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final text = textController.text.trim();
-              try {
-                await controller.saveJournalEntry(text);
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Journal entry saved! ✍️"),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text("Error saving entry: $e"),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
   }
 
-  IconData _getTaskIcon(String taskTitle) {
-    final title = taskTitle.toLowerCase();
-    if (title.contains('wake') || title.contains('sleep')) {
-      return Icons.wb_sunny;
-    } else if (title.contains('water') || title.contains('drink')) {
-      return Icons.water_drop;
-    } else if (title.contains('exercise') || title.contains('workout')) {
-      return Icons.fitness_center;
-    } else if (title.contains('meditate')) {
-      return Icons.self_improvement;
-    } else if (title.contains('read')) {
-      return Icons.menu_book;
-    } else if (title.contains('shower')) {
-      return Icons.shower;
+  String _getMoodText(String mood) {
+    switch (mood) {
+      case '😊':
+        return 'Happy';
+      case '😄':
+        return 'Very Happy';
+      case '😌':
+        return 'Peaceful';
+      case '😐':
+        return 'Neutral';
+      case '😔':
+        return 'Sad';
+      case '😢':
+        return 'Very Sad';
+      default:
+        return '';
     }
-    return Icons.task;
   }
 
   String _getMonthName(int month) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
     ];
     return months[month - 1];
   }
 }
-
-class DottedLinePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.3)
-      ..strokeWidth = 2;
-
-    const dashHeight = 4;
-    const dashSpace = 4;
-    double startY = 0;
-
-    while (startY < size.height) {
-      canvas.drawLine(
-        Offset(0, startY),
-        Offset(0, startY + dashHeight),
-        paint,
-      );
-      startY += dashHeight + dashSpace;
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-

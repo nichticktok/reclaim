@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../../../models/user_model.dart';
+import 'package:recalim/core/models/user_model.dart';
 import '../../domain/repositories/profile_repository.dart';
 import '../../data/repositories/firestore_profile_repository.dart';
 

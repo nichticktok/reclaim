@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../../../models/community_post_model.dart';
-import '../../../../models/community_comment_model.dart';
+import 'package:recalim/features/community/domain/entities/community_post_model.dart';
+import 'package:recalim/features/community/domain/entities/community_comment_model.dart';
 import '../../domain/repositories/community_repository.dart';
 
 /// Firestore implementation of CommunityRepository

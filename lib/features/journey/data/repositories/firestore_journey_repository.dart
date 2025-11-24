@@ -109,5 +109,64 @@ class FirestoreJourneyRepository implements JourneyRepository {
       throw Exception('Failed to get current day: $e');
     }
   }
+
+  @override
+  Future<Map<int, Map<String, dynamic>>> getDayEntries(String userId, List<int> dayNumbers) async {
+    try {
+      final entries = <int, Map<String, dynamic>>{};
+      
+      // Batch fetch all day entries
+      final batch = <Future<void>>[];
+      for (final dayNumber in dayNumbers) {
+        batch.add(
+          getDayEntry(userId, dayNumber).then((entry) {
+            if (entry != null) {
+              entries[dayNumber] = entry;
+            }
+          }),
+        );
+      }
+      
+      await Future.wait(batch);
+      return entries;
+    } catch (e) {
+      throw Exception('Failed to fetch day entries: $e');
+    }
+  }
+
+  @override
+  Future<DateTime?> getJourneyStartDate(String userId) async {
+    try {
+      // Get milestone start date (preferred) or fallback to program
+      final milestoneDoc = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('milestones')
+          .doc('current')
+          .get();
+
+      if (milestoneDoc.exists) {
+        final milestoneData = milestoneDoc.data();
+        return (milestoneData?['startDate'] as Timestamp?)?.toDate();
+      } else {
+        // Fallback to program start date
+        final programDoc = await _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('programs')
+            .doc('current')
+            .get();
+
+        if (programDoc.exists) {
+          final data = programDoc.data();
+          return (data?['startDate'] as Timestamp?)?.toDate();
+        }
+      }
+
+      return null;
+    } catch (e) {
+      throw Exception('Failed to get journey start date: $e');
+    }
+  }
 }
 

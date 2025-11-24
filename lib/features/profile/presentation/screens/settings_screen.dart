@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../../../models/user_model.dart';
-import '../../../../providers/language_provider.dart';
+import 'package:recalim/core/models/user_model.dart';
+import 'package:recalim/core/providers/language_provider.dart';
 import '../../../home/presentation/controllers/home_controller.dart';
 import '../../../auth/presentation/screens/sign_in_screen.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -48,27 +53,13 @@ class SettingsScreen extends StatelessWidget {
                 _buildSettingTile(
                   icon: Icons.person,
                   title: "Edit Profile",
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Profile editing coming soon! ✏️"),
-                        backgroundColor: Colors.orange,
-                      ),
-                    );
-                  },
+                  onTap: () => _showEditProfileDialog(context, controller, user),
                 ),
                 _buildSettingTile(
                   icon: Icons.email,
                   title: "Email",
                   subtitle: user.email.isNotEmpty ? user.email : "Not set",
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Email editing coming soon! 📧"),
-                        backgroundColor: Colors.orange,
-                      ),
-                    );
-                  },
+                  onTap: () => _showEditEmailDialog(context, controller, user),
                 ),
                 const SizedBox(height: 30),
 
@@ -78,14 +69,7 @@ class SettingsScreen extends StatelessWidget {
                 _buildSettingTile(
                   icon: Icons.notifications,
                   title: "Notifications",
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Notification settings coming soon! 🔔"),
-                        backgroundColor: Colors.orange,
-                      ),
-                    );
-                  },
+                  onTap: () => _showNotificationsSettings(context, controller, user),
                 ),
                 _buildSettingTile(
                   icon: Icons.dark_mode,
@@ -334,6 +318,412 @@ class SettingsScreen extends StatelessWidget {
             const SizedBox(height: 20),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Show edit profile dialog
+  void _showEditProfileDialog(BuildContext context, HomeController controller, UserModel user) {
+    final nameController = TextEditingController(text: user.name);
+    final goalController = TextEditingController(text: user.goal);
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF1A1A1A),
+          title: const Row(
+            children: [
+              Icon(Icons.person, color: Colors.orange),
+              SizedBox(width: 8),
+              Text(
+                'Edit Profile',
+                style: TextStyle(color: Colors.white, fontSize: 20),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    labelText: 'Name',
+                    labelStyle: const TextStyle(color: Colors.white70),
+                    hintText: 'Enter your name',
+                    hintStyle: const TextStyle(color: Colors.white54),
+                    filled: true,
+                    fillColor: const Color(0xFF2A2A2A),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.orange, width: 2),
+                    ),
+                  ),
+                  style: const TextStyle(color: Colors.white),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: goalController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: 'Goal',
+                    labelStyle: const TextStyle(color: Colors.white70),
+                    hintText: 'Enter your goal',
+                    hintStyle: const TextStyle(color: Colors.white54),
+                    filled: true,
+                    fillColor: const Color(0xFF2A2A2A),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.orange, width: 2),
+                    ),
+                  ),
+                  style: const TextStyle(color: Colors.white),
+                ),
+                if (isLoading) ...[
+                  const SizedBox(height: 16),
+                  const Center(
+                    child: CircularProgressIndicator(color: Colors.orange),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(dialogContext),
+              child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+            ),
+            ElevatedButton(
+              onPressed: isLoading ? null : () async {
+                final name = nameController.text.trim();
+                final goal = goalController.text.trim();
+
+                if (name.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Name cannot be empty'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                  return;
+                }
+
+                setDialogState(() => isLoading = true);
+
+                try {
+                  await controller.updateProfile(
+                    name: name,
+                    goal: goal,
+                  );
+
+                  // Reload user data to reflect changes
+                  await controller.reloadUser();
+
+                  if (context.mounted) {
+                    Navigator.pop(dialogContext);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Profile updated successfully! ✅'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  setDialogState(() => isLoading = false);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error updating profile: ${e.toString()}'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Show edit email dialog
+  void _showEditEmailDialog(BuildContext context, HomeController controller, UserModel user) {
+    final emailController = TextEditingController(text: user.email);
+    final passwordController = TextEditingController();
+    bool isLoading = false;
+    bool showPassword = false;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF1A1A1A),
+          title: const Row(
+            children: [
+              Icon(Icons.email, color: Colors.orange),
+              SizedBox(width: 8),
+              Text(
+                'Change Email',
+                style: TextStyle(color: Colors.white, fontSize: 20),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Enter your new email address and current password to confirm:',
+                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    labelText: 'New Email',
+                    labelStyle: const TextStyle(color: Colors.white70),
+                    hintText: 'Enter new email',
+                    hintStyle: const TextStyle(color: Colors.white54),
+                    filled: true,
+                    fillColor: const Color(0xFF2A2A2A),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.orange, width: 2),
+                    ),
+                  ),
+                  style: const TextStyle(color: Colors.white),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: passwordController,
+                  obscureText: !showPassword,
+                  decoration: InputDecoration(
+                    labelText: 'Current Password',
+                    labelStyle: const TextStyle(color: Colors.white70),
+                    hintText: 'Enter your password to confirm',
+                    hintStyle: const TextStyle(color: Colors.white54),
+                    filled: true,
+                    fillColor: const Color(0xFF2A2A2A),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.orange, width: 2),
+                    ),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        showPassword ? Icons.visibility : Icons.visibility_off,
+                        color: Colors.white70,
+                      ),
+                      onPressed: () {
+                        setDialogState(() => showPassword = !showPassword);
+                      },
+                    ),
+                  ),
+                  style: const TextStyle(color: Colors.white),
+                ),
+                if (isLoading) ...[
+                  const SizedBox(height: 16),
+                  const Center(
+                    child: CircularProgressIndicator(color: Colors.orange),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(dialogContext),
+              child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+            ),
+            ElevatedButton(
+              onPressed: isLoading ? null : () async {
+                final newEmail = emailController.text.trim();
+                final password = passwordController.text.trim();
+
+                if (newEmail.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Email cannot be empty'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                  return;
+                }
+
+                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(newEmail)) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please enter a valid email address'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                  return;
+                }
+
+                if (password.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Password is required to change email'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                  return;
+                }
+
+                setDialogState(() => isLoading = true);
+
+                try {
+                  final auth = FirebaseAuth.instance;
+                  final currentUser = auth.currentUser;
+                  
+                  if (currentUser == null) {
+                    throw Exception('No authenticated user');
+                  }
+
+                  // Re-authenticate user before changing email
+                  final credential = EmailAuthProvider.credential(
+                    email: currentUser.email!,
+                    password: password,
+                  );
+                  await currentUser.reauthenticateWithCredential(credential);
+
+                  // Update email (sends verification email)
+                  await controller.updateProfile(email: newEmail);
+
+                  // Reload user data to reflect changes
+                  await controller.reloadUser();
+
+                  if (context.mounted) {
+                    Navigator.pop(dialogContext);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Verification email sent! Please check your inbox to confirm the new email address. 📧'),
+                        backgroundColor: Colors.orange,
+                        duration: Duration(seconds: 5),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  setDialogState(() => isLoading = false);
+                  if (context.mounted) {
+                    String errorMessage = 'Error updating email';
+                    if (e.toString().contains('wrong-password')) {
+                      errorMessage = 'Incorrect password';
+                    } else if (e.toString().contains('email-already-in-use')) {
+                      errorMessage = 'Email is already in use';
+                    } else if (e.toString().contains('invalid-email')) {
+                      errorMessage = 'Invalid email address';
+                    }
+                    
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(errorMessage),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Update Email'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Show notifications settings
+  void _showNotificationsSettings(BuildContext context, HomeController controller, UserModel user) {
+    // For now, show a basic notifications settings dialog
+    // This can be expanded later with actual notification preferences
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Row(
+          children: [
+            Icon(Icons.notifications, color: Colors.orange),
+            SizedBox(width: 8),
+            Text(
+              'Notification Settings',
+              style: TextStyle(color: Colors.white, fontSize: 20),
+            ),
+          ],
+        ),
+        content: const SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Notification preferences will be available soon!',
+                style: TextStyle(color: Colors.white70),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'You\'ll be able to configure:',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Text(
+                '• Task reminders\n• Achievement notifications\n• Daily progress updates\n• Community updates',
+                style: TextStyle(color: Colors.white70),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close', style: TextStyle(color: Colors.orange)),
+          ),
+        ],
       ),
     );
   }

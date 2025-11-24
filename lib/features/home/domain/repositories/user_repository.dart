@@ -1,4 +1,4 @@
-import '../../../../models/user_model.dart';
+import 'package:recalim/core/models/user_model.dart';
 
 /// Abstract repository for user data operations
 abstract class UserRepository {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../../models/user_model.dart';
+import 'package:recalim/core/models/user_model.dart';
 import '../controllers/home_controller.dart';
 import '../../../tasks/presentation/screens/daily_tasks_screen.dart';
 import '../../../progress/presentation/screens/progress_screen.dart';
@@ -9,6 +9,7 @@ import '../../../profile/presentation/screens/profile_screen.dart';
 import '../../../auth/presentation/screens/sign_in_screen.dart';
 import '../../../journey/presentation/screens/journey_timeline_screen.dart';
 import '../../../tools/presentation/screens/tools_screen.dart';
+import '../../../tools/presentation/controllers/screen_blocker_controller.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -106,56 +107,71 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
 
-        return Scaffold(
-          extendBody: true,
-          backgroundColor: Colors.grey.shade100,
-          body: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 250),
-            child: _screens.isNotEmpty ? _screens[_selectedIndex] : const SizedBox(),
-          ),
-          bottomNavigationBar: _buildFloatingNavBar(),
+        return Consumer<ScreenBlockerController>(
+          builder: (context, blockerController, child) {
+            return PopScope(
+              canPop: !blockerController.isBlocked,
+              child: Scaffold(
+                extendBody: true,
+                backgroundColor: Colors.grey.shade100,
+                body: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  child: _screens.isNotEmpty ? _screens[_selectedIndex] : const SizedBox(),
+                ),
+                bottomNavigationBar: _buildFloatingNavBar(blockerController.isBlocked),
+              ),
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildFloatingNavBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _navItem(icon: Icons.wb_sunny, index: 0),
-              _navItem(icon: Icons.bar_chart, index: 1),
-              _navItem(icon: Icons.edit, index: 2),
-              _navItem(icon: Icons.shield, index: 3),
-              _navItem(icon: Icons.people, index: 4),
-              _navItem(icon: Icons.grid_view, index: 5),
+  Widget _buildFloatingNavBar(bool isBlocked) {
+    return IgnorePointer(
+      ignoring: isBlocked, // Block all interactions when blocker is active
+      child: Opacity(
+        opacity: isBlocked ? 0.5 : 1.0, // Dim the nav bar when blocked
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A1A1A),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 10,
+                offset: const Offset(0, -2),
+              ),
             ],
+          ),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _navItem(icon: Icons.wb_sunny, index: 0, isBlocked: isBlocked),
+                  _navItem(icon: Icons.bar_chart, index: 1, isBlocked: isBlocked),
+                  _navItem(icon: Icons.edit, index: 2, isBlocked: isBlocked),
+                  _navItem(icon: Icons.shield, index: 3, isBlocked: isBlocked),
+                  _navItem(icon: Icons.people, index: 4, isBlocked: isBlocked),
+                  _navItem(icon: Icons.grid_view, index: 5, isBlocked: isBlocked),
+                ],
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _navItem({required IconData icon, required int index}) {
+  Widget _navItem({required IconData icon, required int index, required bool isBlocked}) {
     final bool isSelected = _selectedIndex == index;
 
     return GestureDetector(
-      onTap: () => setState(() => _selectedIndex = index),
+      onTap: isBlocked
+          ? null // Disable navigation when blocked
+          : () => setState(() => _selectedIndex = index),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeInOut,

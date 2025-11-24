@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../../../models/user_stats_model.dart';
+import 'package:recalim/core/models/user_stats_model.dart';
 
 /// Repository for user statistics (streak, progress, etc.)
 class FirestoreUserStatsRepository {

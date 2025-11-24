@@ -1,4 +1,4 @@
-import '../../../../models/habit_model.dart';
+import 'package:recalim/core/models/habit_model.dart';
 
 /// Abstract repository for tasks/habits data operations
 abstract class TasksRepository {

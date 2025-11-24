@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package recalimevents.reflections;
+
+message ReflectionLogged {
+  string event_id = 1;
+  string user_id = 2;
+  string entry_id = 3;
+  string prompt_id = 4;
+  string mood = 5;
+  string created_at = 6; // ISO 8601
+}
+

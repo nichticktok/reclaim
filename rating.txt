@@ -1,0 +1,458 @@
+================================================================================
+                    RATING SYSTEM - HOW ATTRIBUTES ARE CALCULATED
+================================================================================
+
+OVERVIEW
+--------
+The rating system converts your daily activities and progress into five 
+attribute scores: Wisdom, Confidence, Strength, Discipline, and Focus. 
+Each attribute ranges from 0 to 100, where higher scores indicate better 
+performance in that area.
+
+================================================================================
+                            CALCULATION PROCESS
+================================================================================
+
+STEP 1: COLLECT RAW METRICS
+----------------------------
+The system collects various metrics from your app usage:
+
+TASK METRICS:
+  - tasksCompleted: Total number of tasks you've completed (count)
+  - currentStreak: Current consecutive day streak (days)
+  - longestStreak: Longest streak you've ever achieved (days)
+  - taskCompletionRate: Percentage of tasks completed in last 7 days (0-1)
+  - consistencyScore: How consistent you are over last 30 days (0-1)
+  - proofSubmitted: Number of tasks where you submitted proof (count)
+
+TIME-BASED METRICS:
+  - workoutMinutes: Total minutes spent exercising/working out
+  - meditationMinutes: Total minutes spent meditating
+  - readingMinutes: Total minutes spent reading/learning
+
+QUALITY METRICS:
+  - sleepQuality: Average sleep quality score (0-100)
+
+ENGAGEMENT METRICS:
+  - socialInteractions: Number of community interactions (posts, comments)
+  - reflectionCount: Number of reflections completed
+  - achievementsUnlocked: Number of achievements unlocked
+
+
+STEP 2: NORMALIZE METRICS
+--------------------------
+Each metric is normalized to a 0-1 scale using maximum expected values (caps):
+
+  normalized_value = min(actual_value / cap, 1.0)
+
+Example:
+  - If you completed 500 tasks and the cap is 1000:
+    normalized = 500 / 1000 = 0.5
+
+  - If you completed 1500 tasks (exceeds cap):
+    normalized = min(1500 / 1000, 1.0) = 1.0 (clamped)
+
+METRIC CAPS (Maximum Expected Values):
+  - tasksCompleted: 1000 tasks
+  - currentStreak: 365 days (1 year)
+  - longestStreak: 365 days
+  - workoutMinutes: 10,000 minutes (~166 hours)
+  - meditationMinutes: 5,000 minutes (~83 hours)
+  - readingMinutes: 5,000 minutes (~83 hours)
+  - proofSubmitted: 500 proofs
+  - socialInteractions: 1,000 interactions
+  - reflectionCount: 500 reflections
+  - achievementsUnlocked: 100 achievements
+  - taskCompletionRate: 1.0 (already 0-1)
+  - consistencyScore: 1.0 (already 0-1)
+  - sleepQuality: 100 (already 0-100, converted to 0-1)
+
+
+STEP 3: CALCULATE ATTRIBUTES
+-----------------------------
+Each attribute is calculated using a weighted average of normalized metrics:
+
+  attribute_score = (Σ(metric_value × weight) / Σ(weights)) × 100
+
+The result is then clamped to the 0-100 range.
+
+
+================================================================================
+                        ATTRIBUTE FORMULAS & WEIGHTS
+================================================================================
+
+1. WISDOM (Knowledge, Learning, Reflection)
+   -------------------------------------------
+   Measures your commitment to learning, self-reflection, and knowledge growth.
+
+   Formula:
+     Wisdom = (
+       readingMinutes × 0.30 +
+       meditationMinutes × 0.25 +
+       reflectionCount × 0.20 +
+       tasksCompleted × 0.15 +
+       achievementsUnlocked × 0.10
+     ) × 100
+
+   Example:
+     - Reading: 3000 min (normalized: 0.6) × 0.30 = 0.18
+     - Meditation: 2000 min (normalized: 0.4) × 0.25 = 0.10
+     - Reflections: 50 (normalized: 0.1) × 0.20 = 0.02
+     - Tasks: 500 (normalized: 0.5) × 0.15 = 0.075
+     - Achievements: 10 (normalized: 0.1) × 0.10 = 0.01
+     
+     Total = (0.18 + 0.10 + 0.02 + 0.075 + 0.01) × 100 = 38.5
+     Wisdom Score = 39 (rounded)
+
+
+2. CONFIDENCE (Self-Assurance, Social Engagement)
+   ------------------------------------------------
+   Measures your social engagement, achievement recognition, and self-belief.
+
+   Formula:
+     Confidence = (
+       socialInteractions × 0.30 +
+       achievementsUnlocked × 0.25 +
+       currentStreak × 0.20 +
+       taskCompletionRate × 0.15 +
+       reflectionCount × 0.10
+     ) × 100
+
+   Example:
+     - Social: 200 (normalized: 0.2) × 0.30 = 0.06
+     - Achievements: 20 (normalized: 0.2) × 0.25 = 0.05
+     - Streak: 30 days (normalized: 0.082) × 0.20 = 0.016
+     - Completion: 0.8 × 0.15 = 0.12
+     - Reflections: 30 (normalized: 0.06) × 0.10 = 0.006
+     
+     Total = (0.06 + 0.05 + 0.016 + 0.12 + 0.006) × 100 = 25.2
+     Confidence Score = 25 (rounded)
+
+
+3. STRENGTH (Physical Fitness, Endurance)
+   ---------------------------------------
+   Measures your physical activity, workout consistency, and proof submission.
+
+   Formula:
+     Strength = (
+       workoutMinutes × 0.40 +
+       currentStreak × 0.25 +
+       proofSubmitted × 0.20 +
+       consistencyScore × 0.15
+     ) × 100
+
+   Example:
+     - Workout: 5000 min (normalized: 0.5) × 0.40 = 0.20
+     - Streak: 20 days (normalized: 0.055) × 0.25 = 0.014
+     - Proofs: 100 (normalized: 0.2) × 0.20 = 0.04
+     - Consistency: 0.7 × 0.15 = 0.105
+     
+     Total = (0.20 + 0.014 + 0.04 + 0.105) × 100 = 35.9
+     Strength Score = 36 (rounded)
+
+
+4. DISCIPLINE (Consistency, Commitment, Follow-Through)
+   -----------------------------------------------------
+   Measures your consistency, long-term commitment, and ability to maintain streaks.
+
+   Formula:
+     Discipline = (
+       currentStreak × 0.30 +
+       longestStreak × 0.25 +
+       consistencyScore × 0.25 +
+       taskCompletionRate × 0.20
+     ) × 100
+
+   Example:
+     - Current Streak: 45 days (normalized: 0.123) × 0.30 = 0.037
+     - Longest Streak: 60 days (normalized: 0.164) × 0.25 = 0.041
+     - Consistency: 0.85 × 0.25 = 0.213
+     - Completion: 0.9 × 0.20 = 0.18
+     
+     Total = (0.037 + 0.041 + 0.213 + 0.18) × 100 = 47.1
+     Discipline Score = 47 (rounded)
+
+
+5. FOCUS (Concentration, Task Completion, Attention)
+   --------------------------------------------------
+   Measures your ability to complete tasks, maintain concentration, and stay focused.
+
+   Formula:
+     Focus = (
+       taskCompletionRate × 0.30 +
+       meditationMinutes × 0.25 +
+       consistencyScore × 0.25 +
+       tasksCompleted × 0.20
+     ) × 100
+
+   Example:
+     - Completion: 0.95 × 0.30 = 0.285
+     - Meditation: 1500 min (normalized: 0.3) × 0.25 = 0.075
+     - Consistency: 0.8 × 0.25 = 0.20
+     - Tasks: 600 (normalized: 0.6) × 0.20 = 0.12
+     
+     Total = (0.285 + 0.075 + 0.20 + 0.12) × 100 = 68.0
+     Focus Score = 68 (rounded)
+
+
+================================================================================
+                        SPECIAL CASES & EDGE CASES
+================================================================================
+
+EMPTY INPUT (No Metrics Available)
+-----------------------------------
+When no metrics are available (new user, no data):
+  - All attributes return baseline score: 40.0
+  - This gives new users a starting point
+
+MISSING METRICS
+---------------
+If a specific metric is missing:
+  - That metric contributes 0.0 to the calculation
+  - Other metrics still contribute normally
+  - Example: If workoutMinutes is missing, Strength still calculates using 
+    streak, proofs, and consistency
+
+INVALID VALUES
+--------------
+NaN (Not a Number):
+  - Treated as 0.0
+  - No contribution to attributes
+
+Negative Values:
+  - Clamped to 0.0
+  - No negative contribution
+
+Infinite Values:
+  - Treated as 0.0
+  - Prevents calculation errors
+
+Extreme Values (Above Cap):
+  - Clamped to cap value
+  - Normalized to 1.0 maximum
+  - Prevents single metric from dominating
+
+
+================================================================================
+                        HOW TO IMPROVE YOUR RATINGS
+================================================================================
+
+TO INCREASE WISDOM:
+  - Read more (books, articles, educational content)
+  - Meditate regularly
+  - Complete reflections
+  - Complete more tasks
+  - Unlock achievements
+
+TO INCREASE CONFIDENCE:
+  - Engage with the community (post, comment, interact)
+  - Unlock achievements
+  - Maintain your streak
+  - Complete tasks consistently
+  - Reflect on your progress
+
+TO INCREASE STRENGTH:
+  - Exercise/workout more frequently
+  - Maintain your streak
+  - Submit proof for tasks
+  - Be consistent with your routine
+
+TO INCREASE DISCIPLINE:
+  - Maintain long streaks
+  - Build your longest streak record
+  - Be consistent day-to-day
+  - Complete tasks regularly
+
+TO INCREASE FOCUS:
+  - Complete tasks consistently (high completion rate)
+  - Meditate to improve concentration
+  - Maintain consistency
+  - Complete more tasks overall
+
+
+================================================================================
+                        WHEN RATINGS ARE UPDATED
+================================================================================
+
+Ratings are automatically recalculated when:
+  1. You open the Rating screen
+  2. You complete a task
+  3. Your streak changes
+  4. You submit proof
+  5. You interact with the community
+  6. You complete a reflection
+
+The system also updates your ratings in the database so they persist across
+sessions.
+
+
+================================================================================
+                        UNDERSTANDING YOUR SCORES
+================================================================================
+
+SCORE RANGES:
+  0-30:   Beginner - Just starting out
+  31-50:  Developing - Making progress
+  51-70:  Intermediate - Consistent performance
+  71-85:  Advanced - Strong performance
+  86-100: Expert - Exceptional performance
+
+BASELINE SCORE:
+  New users start at 40.0 for all attributes. This represents a neutral
+  starting point and gives you room to grow in both directions.
+
+COMPARISON:
+  - "Current rating" shows your current calculated scores
+  - "Day 1 rating" shows your starting scores from onboarding
+  - "Day 66" shows your potential maximum scores (from onboarding assessment)
+
+The difference between Current and Day 1 shows your improvement since starting.
+The difference between Day 66 and Current shows how much more you can grow.
+
+
+================================================================================
+                        TECHNICAL DETAILS
+================================================================================
+
+CALCULATION FREQUENCY:
+  - On-demand (when Rating screen opens)
+  - After significant events (task completion, streak update)
+  - Can be triggered manually via AttributeService.updateUserRatings()
+
+PERFORMANCE:
+  - Calculation time: < 10ms for typical inputs
+  - Thread-safe: Can be called from any thread
+  - Stateless: No side effects, pure calculation
+
+STORAGE:
+  - Calculated ratings stored in: users/{userId}/ratings
+  - Updated timestamp: users/{userId}/ratingsUpdatedAt
+  - Persists across app sessions
+
+CONFIGURATION:
+  - Weights and caps can be adjusted in AttributeConfig
+  - Supports remote configuration for A/B testing
+  - Changes take effect immediately (no app restart needed)
+
+
+================================================================================
+                        EXAMPLE: COMPLETE CALCULATION
+================================================================================
+
+User Profile:
+  - Tasks Completed: 250
+  - Current Streak: 15 days
+  - Longest Streak: 20 days
+  - Workout Minutes: 2000
+  - Meditation Minutes: 500
+  - Reading Minutes: 1000
+  - Task Completion Rate: 0.75
+  - Consistency Score: 0.65
+  - Proofs Submitted: 50
+  - Social Interactions: 30
+  - Reflections: 10
+  - Achievements: 5
+
+Step 1: Normalize Metrics
+  tasksCompleted: 250/1000 = 0.25
+  currentStreak: 15/365 = 0.041
+  longestStreak: 20/365 = 0.055
+  workoutMinutes: 2000/10000 = 0.2
+  meditationMinutes: 500/5000 = 0.1
+  readingMinutes: 1000/5000 = 0.2
+  taskCompletionRate: 0.75 (already normalized)
+  consistencyScore: 0.65 (already normalized)
+  proofSubmitted: 50/500 = 0.1
+  socialInteractions: 30/1000 = 0.03
+  reflectionCount: 10/500 = 0.02
+  achievementsUnlocked: 5/100 = 0.05
+
+Step 2: Calculate Attributes
+
+WISDOM:
+  (0.2×0.30 + 0.1×0.25 + 0.02×0.20 + 0.25×0.15 + 0.05×0.10) × 100
+  = (0.06 + 0.025 + 0.004 + 0.0375 + 0.005) × 100
+  = 0.1315 × 100
+  = 13.15 → 13
+
+CONFIDENCE:
+  (0.03×0.30 + 0.05×0.25 + 0.041×0.20 + 0.75×0.15 + 0.02×0.10) × 100
+  = (0.009 + 0.0125 + 0.0082 + 0.1125 + 0.002) × 100
+  = 0.1442 × 100
+  = 14.42 → 14
+
+STRENGTH:
+  (0.2×0.40 + 0.041×0.25 + 0.1×0.20 + 0.65×0.15) × 100
+  = (0.08 + 0.01025 + 0.02 + 0.0975) × 100
+  = 0.20775 × 100
+  = 20.775 → 21
+
+DISCIPLINE:
+  (0.041×0.30 + 0.055×0.25 + 0.65×0.25 + 0.75×0.20) × 100
+  = (0.0123 + 0.01375 + 0.1625 + 0.15) × 100
+  = 0.33855 × 100
+  = 33.855 → 34
+
+FOCUS:
+  (0.75×0.30 + 0.1×0.25 + 0.65×0.25 + 0.25×0.20) × 100
+  = (0.225 + 0.025 + 0.1625 + 0.05) × 100
+  = 0.4625 × 100
+  = 46.25 → 46
+
+Final Scores:
+  Wisdom: 13
+  Confidence: 14
+  Strength: 21
+  Discipline: 34
+  Focus: 46
+
+Note: These are low scores because the user is just starting. As they continue
+      their journey, all scores will increase proportionally to their activity.
+
+
+================================================================================
+                        FREQUENTLY ASKED QUESTIONS
+================================================================================
+
+Q: Why are my scores low even though I'm doing well?
+A: Scores are relative to maximum expected values. If you're new, scores will
+   be lower. They increase as you build up your metrics over time.
+
+Q: Can my score go down?
+A: Yes, if your metrics decrease (e.g., breaking a streak, lower completion
+   rate), your scores will reflect that. This encourages consistency.
+
+Q: How often are scores updated?
+A: Scores are recalculated when you open the Rating screen and after
+   significant events (task completion, streak changes).
+
+Q: Why do I have different scores for different attributes?
+A: Each attribute measures different aspects of your journey. You might be
+   strong in one area (e.g., Discipline from long streaks) but weaker in
+   another (e.g., Wisdom if you don't read much).
+
+Q: What's a good score?
+A: Scores above 50 indicate consistent performance. Scores above 70 indicate
+   strong performance. Scores above 85 are exceptional.
+
+Q: Can I see my progress over time?
+A: Compare "Current rating" with "Day 1 rating" to see your improvement.
+   The difference shows how much you've grown since starting.
+
+Q: How can I get to 100?
+A: To reach 100, you need to maximize all relevant metrics for that attribute.
+   This requires consistent, long-term effort across all areas.
+
+
+================================================================================
+                        END OF DOCUMENTATION
+================================================================================
+
+For technical implementation details, see:
+  - lib/core/attributes/README.md
+  - lib/core/attributes/ATTRIBUTE_CALCULATOR_CONTRACT.md
+
+For code examples, see:
+  - lib/core/attributes/attribute_calculator.dart
+  - lib/core/attributes/attribute_service.dart
+

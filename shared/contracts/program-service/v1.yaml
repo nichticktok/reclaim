@@ -1,0 +1,220 @@
+openapi: 3.0.3
+info:
+  title: Recalim Program Service API
+  version: "1.0.0"
+  description: Manage programs, tasks, workouts, milestones, and mastery progress.
+servers:
+  - url: https://api.recalim.com/programs
+paths:
+  /programs:
+    get:
+      summary: List available programs
+      tags: [programs]
+      parameters:
+        - in: query
+          name: category
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Array of programs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Program'
+    post:
+      summary: Create a custom program
+      tags: [programs]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProgramDraft'
+      responses:
+        "201":
+          description: Program created
+  /programs/{programId}:
+    get:
+      summary: Fetch program detail
+      tags: [programs]
+      parameters:
+        - $ref: '#/components/parameters/ProgramId'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Program'
+    delete:
+      summary: Archive a program
+      tags: [programs]
+      parameters:
+        - $ref: '#/components/parameters/ProgramId'
+      responses:
+        "204":
+          description: Removed
+  /tasks:
+    post:
+      summary: Schedule a task instance
+      tags: [tasks]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskScheduleRequest'
+      responses:
+        "201":
+          description: Task created
+    get:
+      summary: Query tasks by user/date/status
+      tags: [tasks]
+      parameters:
+        - in: query
+          name: userId
+          schema:
+            type: string
+        - in: query
+          name: date
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+  /tasks/{taskId}/complete:
+    post:
+      summary: Mark task complete
+      tags: [tasks]
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCompletion'
+      responses:
+        "200":
+          description: Updated task record
+  /workouts/generate:
+    post:
+      summary: Generate AI workout plan
+      tags: [workouts]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkoutRequest'
+      responses:
+        "202":
+          description: Plan generation accepted
+components:
+  parameters:
+    ProgramId:
+      name: programId
+      in: path
+      required: true
+      schema:
+        type: string
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    Program:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        category:
+          type: string
+        phases:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProgramPhase'
+    ProgramPhase:
+      type: object
+      properties:
+        name:
+          type: string
+        durationDays:
+          type: integer
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskTemplate'
+    ProgramDraft:
+      type: object
+      required: [title, phases]
+      properties:
+        title:
+          type: string
+        phases:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProgramPhase'
+    TaskTemplate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        effortMinutes:
+          type: integer
+    TaskScheduleRequest:
+      type: object
+      required: [userId, date, templateId]
+      properties:
+        userId:
+          type: string
+        date:
+          type: string
+          format: date
+        templateId:
+          type: string
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        status:
+          type: string
+          enum: [pending, in_progress, completed, skipped]
+        dueAt:
+          type: string
+          format: date-time
+    TaskCompletion:
+      type: object
+      properties:
+        completedAt:
+          type: string
+          format: date-time
+        proofUrl:
+          type: string
+    WorkoutRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+        focus:
+          type: string
+        equipment:
+          type: array
+          items:
+            type: string
+

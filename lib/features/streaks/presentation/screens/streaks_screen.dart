@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../tasks/presentation/controllers/tasks_controller.dart';
-import '../../../../models/habit_model.dart';
+import 'package:recalim/core/models/habit_model.dart';
 
 class StreaksScreen extends StatefulWidget {
   const StreaksScreen({super.key});

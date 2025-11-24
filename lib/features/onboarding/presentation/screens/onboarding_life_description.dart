@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/onboarding_header.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../../providers/language_provider.dart' show LangOption;
+import 'package:recalim/core/providers/language_provider.dart' show LangOption;
 
 /// Reclaim — Onboarding Life Description (Step 5)
 class OnboardingLifeDescription extends StatefulWidget {

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../../../models/community_post_model.dart';
-import '../../../../models/community_comment_model.dart';
+import 'package:recalim/features/community/domain/entities/community_post_model.dart';
+import 'package:recalim/features/community/domain/entities/community_comment_model.dart';
 import '../controllers/community_controller.dart';
 
 /// Community Screen - Social feed for all users
@@ -13,7 +13,8 @@ class CommunityScreen extends StatefulWidget {
   State<CommunityScreen> createState() => _CommunityScreenState();
 }
 
-class _CommunityScreenState extends State<CommunityScreen> with WidgetsBindingObserver {
+class _CommunityScreenState extends State<CommunityScreen>
+    with WidgetsBindingObserver {
   CommunityController? _controller;
 
   @override
@@ -62,10 +63,7 @@ class _CommunityScreenState extends State<CommunityScreen> with WidgetsBindingOb
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0F),
       appBar: AppBar(
-        title: const Text(
-          "Community",
-          style: TextStyle(color: Colors.white),
-        ),
+        title: const Text("Community", style: TextStyle(color: Colors.white)),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -82,11 +80,7 @@ class _CommunityScreenState extends State<CommunityScreen> with WidgetsBindingOb
                   color: Colors.orange,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
-                  Icons.add,
-                  color: Colors.white,
-                  size: 20,
-                ),
+                child: const Icon(Icons.add, color: Colors.white, size: 20),
               ),
               tooltip: 'Add Post',
             ),
@@ -111,11 +105,14 @@ class _CommunityScreenState extends State<CommunityScreen> with WidgetsBindingOb
               child: Column(
                 children: [
                   const SizedBox(height: 16),
-                  
+
                   // Header with quote
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 16),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
                     constraints: const BoxConstraints(
                       minHeight: 140,
                       maxHeight: 140,
@@ -148,12 +145,13 @@ class _CommunityScreenState extends State<CommunityScreen> with WidgetsBindingOb
                         Flexible(
                           child: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 500),
-                            transitionBuilder: (Widget child, Animation<double> animation) {
-                              return FadeTransition(
-                                opacity: animation,
-                                child: child,
-                              );
-                            },
+                            transitionBuilder:
+                                (Widget child, Animation<double> animation) {
+                                  return FadeTransition(
+                                    opacity: animation,
+                                    child: child,
+                                  );
+                                },
                             child: Text(
                               controller.currentQuote,
                               key: ValueKey<String>(controller.currentQuote),
@@ -207,13 +205,19 @@ class _CommunityScreenState extends State<CommunityScreen> with WidgetsBindingOb
                       ),
                     )
                   else
-                    ...controller.posts.map((post) => _PostCard(
-                      post: post,
-                      controller: controller,
-                      onLike: () => controller.toggleLikePost(post.id),
-                      onDelete: () => _showDeleteConfirmation(context, post.id, controller),
-                    )),
-                  
+                    ...controller.posts.map(
+                      (post) => _PostCard(
+                        post: post,
+                        controller: controller,
+                        onLike: () => controller.toggleLikePost(post.id),
+                        onDelete: () => _showDeleteConfirmation(
+                          context,
+                          post.id,
+                          controller,
+                        ),
+                      ),
+                    ),
+
                   const SizedBox(height: 20),
                 ],
               ),
@@ -251,17 +255,22 @@ class _CommunityScreenState extends State<CommunityScreen> with WidgetsBindingOb
             maxLines: 5,
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
-              hintText: 'What\'s on your mind? Share your progress, wins, or motivation!',
+              hintText:
+                  'What\'s on your mind? Share your progress, wins, or motivation!',
               hintStyle: const TextStyle(color: Colors.white54),
               filled: true,
               fillColor: const Color(0xFF2A2A2A),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+                borderSide: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.3),
+                ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+                borderSide: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.3),
+                ),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -272,36 +281,40 @@ class _CommunityScreenState extends State<CommunityScreen> with WidgetsBindingOb
           actions: [
             TextButton(
               onPressed: isPosting ? null : () => Navigator.pop(dialogContext),
-              child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white70),
+              ),
             ),
             ElevatedButton(
-              onPressed: isPosting ? null : () async {
-                if (textController.text.trim().isNotEmpty) {
-                  setDialogState(() => isPosting = true);
-                  try {
-                    await controller.addPost(textController.text.trim());
-                    if (mounted) {
-                      Navigator.pop(dialogContext);
-                      scaffoldMessenger.showSnackBar(
-                        const SnackBar(
-                          content: Text('Post shared! 🎉'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    }
-                  } catch (e) {
-                    if (mounted) {
-                      setDialogState(() => isPosting = false);
-                      scaffoldMessenger.showSnackBar(
-                        SnackBar(
-                          content: Text('Error: $e'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    }
-                  }
-                }
-              },
+              onPressed: isPosting
+                  ? null
+                  : () async {
+                      if (textController.text.trim().isEmpty) return;
+                      setDialogState(() => isPosting = true);
+                      try {
+                        await controller.addPost(textController.text.trim());
+                        if (!dialogContext.mounted) return;
+                        Navigator.pop(dialogContext);
+                        if (!mounted) return;
+                        scaffoldMessenger.showSnackBar(
+                          const SnackBar(
+                            content: Text('Post shared! 🎉'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      } catch (e) {
+                        if (!dialogContext.mounted) return;
+                        setDialogState(() => isPosting = false);
+                        if (!mounted) return;
+                        scaffoldMessenger.showSnackBar(
+                          SnackBar(
+                            content: Text('Error: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange,
                 disabledBackgroundColor: Colors.orange.withValues(alpha: 0.5),
@@ -323,18 +336,19 @@ class _CommunityScreenState extends State<CommunityScreen> with WidgetsBindingOb
     );
   }
 
-  void _showDeleteConfirmation(BuildContext context, String postId, CommunityController controller) {
+  void _showDeleteConfirmation(
+    BuildContext context,
+    String postId,
+    CommunityController controller,
+  ) {
     // Save reference to parent context before showing dialog
     final scaffoldMessenger = ScaffoldMessenger.of(context);
-    
+
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text(
-          'Delete Post',
-          style: TextStyle(color: Colors.white),
-        ),
+        title: const Text('Delete Post', style: TextStyle(color: Colors.white)),
         content: const Text(
           'Are you sure you want to delete this post?',
           style: TextStyle(color: Colors.white70),
@@ -342,31 +356,34 @@ class _CommunityScreenState extends State<CommunityScreen> with WidgetsBindingOb
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white70),
+            ),
           ),
           ElevatedButton(
             onPressed: () async {
               try {
                 await controller.deletePost(postId);
-                if (mounted) {
-                  Navigator.pop(dialogContext);
-                  scaffoldMessenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('Post deleted'),
-                      backgroundColor: Colors.orange,
-                    ),
-                  );
-                }
+                if (!dialogContext.mounted) return;
+                Navigator.pop(dialogContext);
+                if (!mounted) return;
+                scaffoldMessenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('Post deleted'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
               } catch (e) {
-                if (mounted) {
-                  Navigator.pop(dialogContext);
-                  scaffoldMessenger.showSnackBar(
-                    SnackBar(
-                      content: Text('Error: $e'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
+                if (!dialogContext.mounted) return;
+                Navigator.pop(dialogContext);
+                if (!mounted) return;
+                scaffoldMessenger.showSnackBar(
+                  SnackBar(
+                    content: Text('Error: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -418,11 +435,15 @@ class _PostCardState extends State<_PostCard> {
   @override
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
-    final isOwnPost = currentUser != null && widget.post.userId == currentUser.uid;
-    final isLiked = currentUser != null && widget.post.isLikedBy(currentUser.uid);
+    final isOwnPost =
+        currentUser != null && widget.post.userId == currentUser.uid;
+    final isLiked =
+        currentUser != null && widget.post.isLikedBy(currentUser.uid);
     final avatarColor = Color(widget.post.getAvatarColorValue());
     final comments = widget.controller.getComments(widget.post.id);
-    final topLevelComments = comments.where((c) => c.parentCommentId == null).toList();
+    final topLevelComments = comments
+        .where((c) => c.parentCommentId == null)
+        .toList();
 
     return GestureDetector(
       onTap: () {
@@ -447,330 +468,374 @@ class _PostCardState extends State<_PostCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-          // Header: Avatar, name, time, delete button
-          Row(
-            children: [
-              // Avatar
-              CircleAvatar(
-                backgroundColor: avatarColor,
-                radius: 20,
-                child: Text(
-                  widget.post.userName.isNotEmpty ? widget.post.userName[0].toUpperCase() : 'U',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Name and time
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.post.userName,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      widget.post.getTimeAgo(),
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.5),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Delete button (only for own posts)
-              if (isOwnPost)
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                  onPressed: widget.onDelete,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Message
-          Text(
-            widget.post.message,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 12),
-          // Like button and count
-          Row(
-            children: [
-              GestureDetector(
-                onTap: widget.onLike,
-                behavior: HitTestBehavior.opaque,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: isLiked
-                        ? Colors.red.withValues(alpha: 0.2)
-                        : Colors.white.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: isLiked
-                          ? Colors.red.withValues(alpha: 0.5)
-                          : Colors.white.withValues(alpha: 0.1),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        isLiked ? Icons.favorite : Icons.favorite_border,
-                        color: isLiked ? Colors.red : Colors.white.withValues(alpha: 0.7),
-                        size: 18,
-                      ),
-                      if (widget.post.likes > 0) ...[
-                        const SizedBox(width: 6),
-                        Text(
-                          widget.post.likes.toString(),
-                          style: TextStyle(
-                            color: isLiked ? Colors.red : Colors.white.withValues(alpha: 0.7),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Comment button
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _showComments = !_showComments;
-                  });
-                },
-                behavior: HitTestBehavior.opaque,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.1),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.comment_outlined,
-                        color: Colors.white.withValues(alpha: 0.7),
-                        size: 18,
-                      ),
-                      if (widget.post.comments > 0) ...[
-                        const SizedBox(width: 6),
-                        Text(
-                          widget.post.comments.toString(),
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.7),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          // Comments section
-          if (_showComments) ...[
-            const SizedBox(height: 16),
-            const Divider(color: Colors.white24, height: 1),
-            const SizedBox(height: 12),
-            // Close button
+            // Header: Avatar, name, time, delete button
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _showComments = false;
-                    });
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.close, color: Colors.white70, size: 16),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Close',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.7),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            // Comment input
-            GestureDetector(
-              onTap: () {}, // Prevent tap from closing comments
-              behavior: HitTestBehavior.opaque,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+                // Avatar
                 CircleAvatar(
-                  backgroundColor: currentUser != null
-                      ? Color(_getUserAvatarColor(currentUser.displayName ?? 'You'))
-                      : Colors.grey,
-                  radius: 16,
+                  backgroundColor: avatarColor,
+                  radius: 20,
                   child: Text(
-                    currentUser?.displayName?[0].toUpperCase() ?? 'Y',
+                    widget.post.userName.isNotEmpty
+                        ? widget.post.userName[0].toUpperCase()
+                        : 'U',
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
-                      fontSize: 12,
+                      fontSize: 16,
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 12),
+                // Name and time
                 Expanded(
-                  child: TextField(
-                    controller: _commentController,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: _replyingToCommentId != null
-                          ? 'Write a reply...'
-                          : 'Write a comment...',
-                      hintStyle: const TextStyle(color: Colors.white54),
-                      filled: true,
-                      fillColor: const Color(0xFF2A2A2A),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        borderSide: BorderSide.none,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.post.userName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
+                      const SizedBox(height: 2),
+                      Text(
+                        widget.post.getTimeAgo(),
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.5),
+                          fontSize: 12,
+                        ),
                       ),
-                    ),
-                    maxLines: null,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (text) {
-                      if (text.trim().isNotEmpty) {
-                        _submitComment();
-                      }
-                    },
+                    ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.send, color: Colors.orange, size: 20),
-                  onPressed: () {
-                    if (_commentController.text.trim().isNotEmpty) {
-                      _submitComment();
-                    }
-                  },
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
+                // Delete button (only for own posts)
+                if (isOwnPost)
+                  IconButton(
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      color: Colors.red,
+                      size: 20,
+                    ),
+                    onPressed: widget.onDelete,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
               ],
+            ),
+            const SizedBox(height: 12),
+            // Message
+            Text(
+              widget.post.message,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                height: 1.5,
               ),
             ),
-            if (_replyingToCommentId != null) ...[
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const SizedBox(width: 40),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            const SizedBox(height: 12),
+            // Like button and count
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: widget.onLike,
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
+                      color: isLiked
+                          ? Colors.red.withValues(alpha: 0.2)
+                          : Colors.white.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isLiked
+                            ? Colors.red.withValues(alpha: 0.5)
+                            : Colors.white.withValues(alpha: 0.1),
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          'Replying to ${comments.firstWhere((c) => c.id == _replyingToCommentId).userName}',
-                          style: const TextStyle(color: Colors.orange, fontSize: 12),
+                        Icon(
+                          isLiked ? Icons.favorite : Icons.favorite_border,
+                          color: isLiked
+                              ? Colors.red
+                              : Colors.white.withValues(alpha: 0.7),
+                          size: 18,
                         ),
-                        const SizedBox(width: 4),
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _replyingToCommentId = null;
-                            });
-                          },
-                          child: const Icon(Icons.close, color: Colors.orange, size: 16),
-                        ),
+                        if (widget.post.likes > 0) ...[
+                          const SizedBox(width: 6),
+                          Text(
+                            widget.post.likes.toString(),
+                            style: TextStyle(
+                              color: isLiked
+                                  ? Colors.red
+                                  : Colors.white.withValues(alpha: 0.7),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Comment button
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _showComments = !_showComments;
+                    });
+                  },
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.1),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.comment_outlined,
+                          color: Colors.white.withValues(alpha: 0.7),
+                          size: 18,
+                        ),
+                        if (widget.post.comments > 0) ...[
+                          const SizedBox(width: 6),
+                          Text(
+                            widget.post.comments.toString(),
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.7),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            // Comments section
+            if (_showComments) ...[
+              const SizedBox(height: 16),
+              const Divider(color: Colors.white24, height: 1),
+              const SizedBox(height: 12),
+              // Close button
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _showComments = false;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.close,
+                            color: Colors.white70,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Close',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.7),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
-            ],
-            const SizedBox(height: 12),
-            // Comments list
-            GestureDetector(
-              onTap: () {}, // Prevent tap from closing comments
-              behavior: HitTestBehavior.opaque,
-              child: topLevelComments.isEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                      child: Center(
-                        child: Text(
-                          'No comments yet. Be the first to comment!',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.5),
-                            fontSize: 14,
-                          ),
+              const SizedBox(height: 12),
+              // Comment input
+              GestureDetector(
+                onTap: () {}, // Prevent tap from closing comments
+                behavior: HitTestBehavior.opaque,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: currentUser != null
+                          ? Color(
+                              _getUserAvatarColor(
+                                currentUser.displayName ?? 'You',
+                              ),
+                            )
+                          : Colors.grey,
+                      radius: 16,
+                      child: Text(
+                        currentUser?.displayName?[0].toUpperCase() ?? 'Y',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
                         ),
                       ),
-                    )
-                  : Column(
-                      children: topLevelComments.asMap().entries.map((entry) {
-                        final index = entry.key;
-                        final comment = entry.value;
-                        return _CommentWidget(
-                          key: ValueKey('comment_${comment.id}_$index'),
-                          comment: comment,
-                          allComments: comments,
-                          controller: widget.controller,
-                          postId: widget.post.id,
-                          onReply: () {
-                            setState(() {
-                              _replyingToCommentId = comment.id;
-                            });
-                          },
-                        );
-                      }).toList(),
                     ),
-            ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _commentController,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: _replyingToCommentId != null
+                              ? 'Write a reply...'
+                              : 'Write a comment...',
+                          hintStyle: const TextStyle(color: Colors.white54),
+                          filled: true,
+                          fillColor: const Color(0xFF2A2A2A),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                        ),
+                        maxLines: null,
+                        textInputAction: TextInputAction.send,
+                        onSubmitted: (text) {
+                          if (text.trim().isNotEmpty) {
+                            _submitComment();
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.send,
+                        color: Colors.orange,
+                        size: 20,
+                      ),
+                      onPressed: () {
+                        if (_commentController.text.trim().isNotEmpty) {
+                          _submitComment();
+                        }
+                      },
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+              ),
+              if (_replyingToCommentId != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const SizedBox(width: 40),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Replying to ${comments.firstWhere((c) => c.id == _replyingToCommentId).userName}',
+                            style: const TextStyle(
+                              color: Colors.orange,
+                              fontSize: 12,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _replyingToCommentId = null;
+                              });
+                            },
+                            child: const Icon(
+                              Icons.close,
+                              color: Colors.orange,
+                              size: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 12),
+              // Comments list
+              GestureDetector(
+                onTap: () {}, // Prevent tap from closing comments
+                behavior: HitTestBehavior.opaque,
+                child: topLevelComments.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        child: Center(
+                          child: Text(
+                            'No comments yet. Be the first to comment!',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.5),
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      )
+                    : Column(
+                        children: topLevelComments.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final comment = entry.value;
+                          return _CommentWidget(
+                            key: ValueKey('comment_${comment.id}_$index'),
+                            comment: comment,
+                            allComments: comments,
+                            controller: widget.controller,
+                            postId: widget.post.id,
+                            onReply: () {
+                              setState(() {
+                                _replyingToCommentId = comment.id;
+                              });
+                            },
+                          );
+                        }).toList(),
+                      ),
+              ),
+            ],
           ],
-        ],
         ),
       ),
     );
@@ -793,10 +858,7 @@ class _PostCardState extends State<_PostCard> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -838,9 +900,12 @@ class _CommentWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
     final isLiked = currentUser != null && comment.isLikedBy(currentUser.uid);
-    final isOwnComment = currentUser != null && comment.userId == currentUser.uid;
+    final isOwnComment =
+        currentUser != null && comment.userId == currentUser.uid;
     final avatarColor = Color(comment.getAvatarColorValue());
-    final replies = allComments.where((c) => c.parentCommentId == comment.id).toList();
+    final replies = allComments
+        .where((c) => c.parentCommentId == comment.id)
+        .toList();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -854,7 +919,9 @@ class _CommentWidget extends StatelessWidget {
                 backgroundColor: avatarColor,
                 radius: 16,
                 child: Text(
-                  comment.userName.isNotEmpty ? comment.userName[0].toUpperCase() : 'U',
+                  comment.userName.isNotEmpty
+                      ? comment.userName[0].toUpperCase()
+                      : 'U',
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -912,11 +979,14 @@ class _CommentWidget extends StatelessWidget {
                     Row(
                       children: [
                         GestureDetector(
-                          onTap: () => controller.toggleLikeComment(postId, comment.id),
+                          onTap: () =>
+                              controller.toggleLikeComment(postId, comment.id),
                           child: Row(
                             children: [
                               Icon(
-                                isLiked ? Icons.favorite : Icons.favorite_border,
+                                isLiked
+                                    ? Icons.favorite
+                                    : Icons.favorite_border,
                                 color: isLiked ? Colors.red : Colors.white54,
                                 size: 16,
                               ),
@@ -925,7 +995,9 @@ class _CommentWidget extends StatelessWidget {
                                 Text(
                                   comment.likes.toString(),
                                   style: TextStyle(
-                                    color: isLiked ? Colors.red : Colors.white54,
+                                    color: isLiked
+                                        ? Colors.red
+                                        : Colors.white54,
                                     fontSize: 12,
                                   ),
                                 ),
@@ -938,7 +1010,11 @@ class _CommentWidget extends StatelessWidget {
                           onTap: onReply,
                           child: Row(
                             children: [
-                              const Icon(Icons.reply, color: Colors.white54, size: 16),
+                              const Icon(
+                                Icons.reply,
+                                color: Colors.white54,
+                                size: 16,
+                              ),
                               const SizedBox(width: 4),
                               Text(
                                 'Reply',
@@ -953,10 +1029,15 @@ class _CommentWidget extends StatelessWidget {
                         if (isOwnComment) ...[
                           const SizedBox(width: 16),
                           GestureDetector(
-                            onTap: () => _showDeleteCommentConfirmation(context),
+                            onTap: () =>
+                                _showDeleteCommentConfirmation(context),
                             child: Row(
                               children: [
-                                const Icon(Icons.delete_outline, color: Colors.red, size: 16),
+                                const Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.red,
+                                  size: 16,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   'Delete',
@@ -1005,7 +1086,7 @@ class _CommentWidget extends StatelessWidget {
   void _showDeleteCommentConfirmation(BuildContext context) {
     // Save reference to scaffold messenger before showing dialog
     final scaffoldMessenger = ScaffoldMessenger.of(context);
-    
+
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -1021,13 +1102,16 @@ class _CommentWidget extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white70),
+            ),
           ),
           ElevatedButton(
             onPressed: () async {
               // Close dialog immediately
               Navigator.pop(dialogContext);
-              
+
               try {
                 await controller.deleteComment(postId, comment.id);
               } catch (e) {

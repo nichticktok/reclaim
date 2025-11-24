@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/onboarding_header.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../../providers/language_provider.dart' show LangOption;
+import 'package:recalim/core/providers/language_provider.dart' show LangOption;
 
 /// Reclaim — Onboarding Main Character Screen (Step 10)
 class OnboardingMainCharacter extends StatefulWidget {

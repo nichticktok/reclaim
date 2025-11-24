@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:recalim/core/models/habit_model.dart';
+import '../../../../core/utils/attribute_utils.dart';
 import '../../../tasks/presentation/controllers/tasks_controller.dart';
 import '../controllers/progress_controller.dart';
 import '../../../achievements/presentation/controllers/achievements_controller.dart';
-import '../../../../models/habit_model.dart';
 
 class TodayProgressScreen extends StatefulWidget {
   const TodayProgressScreen({super.key});
@@ -339,41 +340,61 @@ class _TodayProgressScreenState extends State<TodayProgressScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        ...tasks.map((task) => Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1A1A1A),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withValues(alpha: 0.2)),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                task.isCompletedToday()
-                    ? Icons.check_circle
-                    : task.isSkippedToday()
-                        ? Icons.skip_next
-                        : Icons.radio_button_unchecked,
-                color: color,
-                size: 20,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  task.title,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: task.isCompletedToday() ? 1.0 : 0.7),
-                    fontSize: 14,
-                    decoration: task.isCompletedToday()
-                        ? TextDecoration.lineThrough
-                        : null,
+        ...tasks.map((task) {
+          // Get attribute for color coding
+          final attribute = task.attribute ?? AttributeUtils.determineAttribute(
+            title: task.title,
+            description: task.description,
+            category: '',
+          );
+          final attributeColor = AttributeUtils.getAttributeColor(attribute);
+          
+          return Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1A1A1A),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: attributeColor.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                // Attribute color indicator
+                Container(
+                  width: 4,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: attributeColor,
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-              ),
-            ],
-          ),
-        )),
+                const SizedBox(width: 12),
+                Icon(
+                  task.isCompletedToday()
+                      ? Icons.check_circle
+                      : task.isSkippedToday()
+                          ? Icons.skip_next
+                          : Icons.radio_button_unchecked,
+                  color: attributeColor,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    task.title,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: task.isCompletedToday() ? 1.0 : 0.7),
+                      fontSize: 14,
+                      decoration: task.isCompletedToday()
+                          ? TextDecoration.lineThrough
+                          : null,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
       ],
     );
   }

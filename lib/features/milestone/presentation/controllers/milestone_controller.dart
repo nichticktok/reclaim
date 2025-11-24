@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../../../models/milestone_model.dart';
+import 'package:recalim/core/models/milestone_model.dart';
 import '../../data/repositories/firestore_milestone_repository.dart';
 
 class MilestoneController extends ChangeNotifier {

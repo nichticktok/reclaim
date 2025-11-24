@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../../../models/user_model.dart';
+import 'package:recalim/core/models/user_model.dart';
 import '../../domain/repositories/profile_repository.dart';
 
 /// Firestore implementation of ProfileRepository

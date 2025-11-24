@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../../../models/achievement_model.dart';
-import '../../../../models/habit_model.dart';
+import 'package:recalim/features/achievements/domain/entities/achievement_model.dart';
+import 'package:recalim/core/models/habit_model.dart';
 
 class AchievementsController extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;

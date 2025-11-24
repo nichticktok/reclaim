@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../../widgets/reflection_card.dart';
-import '../../../../widgets/custom_button.dart';
+import 'package:recalim/core/widgets/reflection_card.dart';
+import 'package:recalim/core/widgets/custom_button.dart';
 
 class ReflectionScreen extends StatefulWidget {
   const ReflectionScreen({super.key});

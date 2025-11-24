@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../../../models/milestone_model.dart';
+import 'package:recalim/core/models/milestone_model.dart';
 import 'milestone_repository.dart';
 
 /// Firestore implementation of MilestoneRepository

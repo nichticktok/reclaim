@@ -1,4 +1,4 @@
-import '../../../../models/progress_model.dart';
+import 'package:recalim/core/models/progress_model.dart';
 
 /// Abstract repository for progress data operations
 abstract class ProgressRepository {

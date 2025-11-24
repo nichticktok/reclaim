@@ -1,14 +1,24 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart' show debugPrint, kDebugMode, kIsWeb, TargetPlatform, defaultTargetPlatform;
+import 'package:flutter/foundation.dart'
+    show
+        debugPrint,
+        kDebugMode,
+        kIsWeb,
+        TargetPlatform,
+        defaultTargetPlatform;
 import 'package:flutter/material.dart';
+import 'package:flutter_gemini/flutter_gemini.dart';
+
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'app/app.dart';
 import 'app/di.dart';
 import 'app/env.dart';
+import 'features/projects/data/services/ai_project_planning_service.dart';
+
 
 
 Future<void> main() async {
@@ -48,6 +58,15 @@ Future<void> main() async {
       debugPrint(
           '[firestore] Using Firestore emulator at $host:${AppEnv.firestoreEmulatorPort}');
     }
+  }
+
+  // Initialize Gemini AI
+  final apiKey = AIProjectPlanningService.getApiKey();
+  if (apiKey.isNotEmpty) {
+    Gemini.init(apiKey: apiKey, enableDebugging: kDebugMode);
+    debugPrint('[gemini] Gemini AI initialized');
+  } else {
+    debugPrint('[gemini] Warning: Gemini API key not configured');
   }
 
   runApp(

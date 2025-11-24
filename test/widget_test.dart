@@ -9,7 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:flutter/material.dart';
 
-import 'package:recalim/web/landing_page.dart';
+import 'package:recalim/features/web/landing_page.dart';
 
 void main() {
   testWidgets('LandingPage renders primary call-to-action buttons', (tester) async {

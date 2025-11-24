@@ -1,0 +1,197 @@
+openapi: 3.0.3
+info:
+  title: Recalim Community Service API
+  version: "1.0.0"
+  description: Community feed, project sharing, and tooling endpoints.
+servers:
+  - url: https://api.recalim.com/community
+paths:
+  /posts:
+    get:
+      summary: List feed posts
+      tags: [posts]
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Paginated posts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostList'
+    post:
+      summary: Publish a new post
+      tags: [posts]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostDraft'
+      responses:
+        "201":
+          description: Post created
+  /posts/{postId}/reactions:
+    post:
+      summary: React to a post
+      tags: [posts]
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReactionRequest'
+      responses:
+        "200":
+          description: Reaction applied
+  /projects:
+    get:
+      summary: List public projects
+      tags: [projects]
+      responses:
+        "200":
+          description: Projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Project'
+    post:
+      summary: Publish a project template
+      tags: [projects]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectDraft'
+      responses:
+        "201":
+          description: Project published
+  /tools/{toolId}/runs:
+    post:
+      summary: Execute a utility tool (e.g., AI helper)
+      tags: [tools]
+      parameters:
+        - $ref: '#/components/parameters/ToolId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ToolRunRequest'
+      responses:
+        "202":
+          description: Tool run accepted
+components:
+  parameters:
+    PostId:
+      name: postId
+      in: path
+      required: true
+      schema:
+        type: string
+    ToolId:
+      name: toolId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    PostList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Post'
+        nextPage:
+          type: integer
+    Post:
+      type: object
+      properties:
+        id:
+          type: string
+        authorId:
+          type: string
+        body:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        reactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Reaction'
+    PostDraft:
+      type: object
+      required: [authorId, body]
+      properties:
+        authorId:
+          type: string
+        body:
+          type: string
+        attachments:
+          type: array
+          items:
+            type: string
+    Reaction:
+      type: object
+      properties:
+        userId:
+          type: string
+        type:
+          type: string
+          enum: [like, celebrate, support]
+    ReactionRequest:
+      type: object
+      required: [userId, type]
+      properties:
+        userId:
+          type: string
+        type:
+          type: string
+          enum: [like, celebrate, support]
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+        ownerId:
+          type: string
+        title:
+          type: string
+        summary:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+    ProjectDraft:
+      type: object
+      required: [ownerId, title]
+      properties:
+        ownerId:
+          type: string
+        title:
+          type: string
+        summary:
+          type: string
+        content:
+          type: string
+    ToolRunRequest:
+      type: object
+      required: [userId, payload]
+      properties:
+        userId:
+          type: string
+        payload:
+          type: object
+          additionalProperties: true
+

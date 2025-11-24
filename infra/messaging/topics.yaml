@@ -1,0 +1,23 @@
+topics:
+  - name: user.created
+    publisher: auth-service
+    subscribers:
+      - user-profile-service
+      - reporting-service
+  - name: task.completed
+    publisher: program-service
+    subscribers:
+      - reporting-service
+      - community-service
+      - reflection-service
+  - name: reflection.logged
+    publisher: reflection-service
+    subscribers:
+      - reporting-service
+      - community-service
+  - name: subscription.updated
+    publisher: user-profile-service
+    subscribers:
+      - reporting-service
+      - auth-service
+

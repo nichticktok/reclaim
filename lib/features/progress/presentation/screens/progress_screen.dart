@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../../models/habit_model.dart';
+import 'package:recalim/core/models/habit_model.dart';
+import '../../../../core/utils/attribute_utils.dart';
 import '../../../tasks/presentation/controllers/tasks_controller.dart';
 import '../controllers/progress_controller.dart';
 
@@ -390,40 +391,35 @@ class _ProgressScreenState extends State<ProgressScreen> {
   }
 
   Widget _buildImprovementCard(HabitModel habit) {
-    // Get appropriate background gradient and quote based on task type
-    List<Color> getBackgroundGradient() {
-      final title = habit.title.toLowerCase();
-      if (title.contains('meditate') || title.contains('meditation')) {
-        return [const Color(0xFF6B4E71), const Color(0xFF8B6F8F)];
-      } else if (title.contains('water') || title.contains('drink')) {
-        return [const Color(0xFF4A90E2), const Color(0xFF6BA3E8)];
-      } else if (title.contains('exercise') || title.contains('workout')) {
-        return [const Color(0xFFE74C3C), const Color(0xFFEC7063)];
-      } else if (title.contains('read') || title.contains('reading')) {
-        return [const Color(0xFF8E44AD), const Color(0xFFA569BD)];
-      } else if (title.contains('wake') || title.contains('sleep')) {
-        return [const Color(0xFFFFA500), const Color(0xFFFFB84D)];
-      }
-      return [const Color(0xFF34495E), const Color(0xFF5D6D7E)];
-    }
-
+    // Get attribute from habit (from database) or determine it
+    final attribute = habit.attribute ?? AttributeUtils.determineAttribute(
+      title: habit.title,
+      description: habit.description,
+      category: '', // HabitModel doesn't have category, use empty string
+    );
+    
+    // Get background gradient and color using centralized utility
+    final gradient = AttributeUtils.getAttributeGradient(attribute);
+    final attributeColor = AttributeUtils.getAttributeColor(attribute);
+    
+    // Get quote based on attribute
     String getQuote() {
-      final title = habit.title.toLowerCase();
-      if (title.contains('meditate') || title.contains('meditation')) {
-        return "The noble minds are calm, steady.";
-      } else if (title.contains('water') || title.contains('drink')) {
-        return "Stay hydrated, stay energised.";
-      } else if (title.contains('exercise') || title.contains('workout')) {
-        return "Strength comes from consistency.";
-      } else if (title.contains('read') || title.contains('reading')) {
-        return "Knowledge is power.";
-      } else if (title.contains('wake') || title.contains('sleep')) {
-        return "Early to bed, early to rise.";
+      switch (attribute) {
+        case 'Wisdom':
+          return "Knowledge is power.";
+        case 'Confidence':
+          return "Believe in yourself.";
+        case 'Strength':
+          return "Strength comes from consistency.";
+        case 'Discipline':
+          return "Early to bed, early to rise.";
+        case 'Focus':
+          return "The noble minds are calm, steady.";
+        default:
+          return "Stay consistent and grow";
       }
-      return "Stay consistent and grow";
     }
 
-    final gradient = getBackgroundGradient();
     final quote = getQuote();
     final isCompleted = habit.isCompletedToday();
 
@@ -467,9 +463,22 @@ class _ProgressScreenState extends State<ProgressScreen> {
                 ),
               ),
             ),
+            // Attribute color indicator bar
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              child: Container(
+                width: 6,
+                decoration: BoxDecoration(
+                  color: attributeColor,
+                  borderRadius: const BorderRadius.horizontal(left: Radius.circular(20)),
+                ),
+              ),
+            ),
             // Content
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.fromLTRB(32, 20, 20, 20), // Adjusted padding for the bar
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

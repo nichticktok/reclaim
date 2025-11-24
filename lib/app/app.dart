@@ -10,8 +10,12 @@ import '../features/home/presentation/screens/home_screen.dart';
 import '../features/auth/presentation/screens/sign_in_screen.dart';
 import '../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../features/tasks/presentation/screens/task_detail_screen.dart';
-import '../web/landing_page.dart';
-import '../providers/language_provider.dart';
+import '../features/projects/presentation/screens/create_project_screen.dart';
+import '../features/workouts/presentation/screens/workout_setup_screen.dart';
+import '../features/web/landing_page.dart';
+import 'package:recalim/core/providers/language_provider.dart';
+import '../features/tools/presentation/widgets/screen_blocker_overlay.dart';
+import '../features/tools/presentation/widgets/screen_blocker_lifecycle_observer.dart';
 
 class ReclaimApp extends StatelessWidget {
   const ReclaimApp({super.key});
@@ -20,9 +24,13 @@ class ReclaimApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<LanguageProvider>(
       builder: (context, languageProvider, child) {
-        return MaterialApp(
-          title: 'Reclaim',
-          debugShowCheckedModeBanner: false,
+        return ScreenBlockerLifecycleObserver(
+          child: MaterialApp(
+            title: 'Reclaim',
+            debugShowCheckedModeBanner: false,
+            builder: (context, child) {
+              return ScreenBlockerOverlay(child: child!);
+            },
           // Localization configuration
           localizationsDelegates: const [
             AppLocalizations.delegate,
@@ -37,6 +45,8 @@ class ReclaimApp extends StatelessWidget {
         '/home_screen': (context) => HomeScreen(), // Remove const to ensure Provider context is available
         '/sign_in_screen': (context) => const SignInScreen(),
         '/task_detail': (context) => const TaskDetailScreen(),
+        '/create_project': (context) => const CreateProjectScreen(),
+        '/workout_setup': (context) => const WorkoutSetupScreen(),
       },
       home: kIsWeb
           ? const LandingPage()
@@ -89,6 +99,7 @@ class ReclaimApp extends StatelessWidget {
                 );
               },
             ),
+          ),
         );
       },
     );

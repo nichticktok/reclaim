@@ -27,7 +27,11 @@ class _DailyJourneyScreenState extends State<DailyJourneyScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final controller = context.read<JourneyController>();
+      // Initialize if not already initialized
       controller.initialize().then((_) {
+        // Load data for the specific day
+        controller.loadDayData(widget.dayNumber).then((_) {
+          if (mounted) {
         if (controller.currentMood != null) {
           setState(() {
             _selectedMood = controller.currentMood;
@@ -36,6 +40,8 @@ class _DailyJourneyScreenState extends State<DailyJourneyScreen> {
         if (controller.journalEntry != null) {
           _journalController.text = controller.journalEntry!;
         }
+          }
+        });
       });
     });
   }
@@ -112,7 +118,7 @@ class _DailyJourneyScreenState extends State<DailyJourneyScreen> {
                 setState(() {
                   _selectedMood = mood;
                 });
-                controller.saveMood(mood);
+                controller.saveMood(mood, dayNumber: widget.dayNumber);
               },
               child: Container(
                 width: 70,
@@ -191,7 +197,7 @@ class _DailyJourneyScreenState extends State<DailyJourneyScreen> {
           height: 50,
           child: ElevatedButton(
             onPressed: () {
-              controller.saveJournalEntry(_journalController.text);
+              controller.saveJournalEntry(_journalController.text, dayNumber: widget.dayNumber);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Journal entry saved!'),

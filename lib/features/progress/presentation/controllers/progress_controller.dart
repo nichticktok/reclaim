@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../../../models/progress_model.dart';
-import '../../../../models/user_stats_model.dart';
-import '../../../../models/habit_model.dart';
+import 'package:recalim/core/models/progress_model.dart';
+import 'package:recalim/core/models/user_stats_model.dart';
+import 'package:recalim/core/models/habit_model.dart';
 import '../../domain/repositories/progress_repository.dart';
 import '../../data/repositories/firestore_progress_repository.dart';
 import '../../data/repositories/firestore_user_stats_repository.dart';

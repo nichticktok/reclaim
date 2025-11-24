@@ -1,7 +1,7 @@
 // OnboardingHeader.dart (your file with tiny edits)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../../providers/language_provider.dart';
+import 'package:recalim/core/providers/language_provider.dart';
 import '../screens/onboarding_screen.dart'; // InheritedOnboardingProgress
 
 class OnboardingHeader extends StatelessWidget {

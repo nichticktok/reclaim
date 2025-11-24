@@ -20,6 +20,14 @@ class JourneyController extends ChangeNotifier {
   String? get journalEntry => _journalEntry;
   String? get error => _error;
 
+  Map<int, Map<String, dynamic>> _dayEntries = {};
+  DateTime? _journeyStartDate;
+  int _totalDays = 30;
+
+  Map<int, Map<String, dynamic>> get dayEntries => _dayEntries;
+  DateTime? get journeyStartDate => _journeyStartDate;
+  int get totalDays => _totalDays;
+
   /// Initialize and load current day data (only if not already initialized)
   Future<void> initialize({bool forceRefresh = false}) async {
     // Skip if already initialized unless force refresh
@@ -38,8 +46,9 @@ class JourneyController extends ChangeNotifier {
     _error = null;
     try {
       _currentDay = await _repository.getCurrentDay(user.uid);
+      _journeyStartDate = await _repository.getJourneyStartDate(user.uid);
       
-      // Load existing day entry
+      // Load existing day entry for current day
       final dayEntry = await _repository.getDayEntry(user.uid, _currentDay);
       if (dayEntry != null) {
         _currentMood = dayEntry['mood'] as String?;
@@ -56,8 +65,56 @@ class JourneyController extends ChangeNotifier {
     }
   }
 
-  /// Save mood selection
-  Future<void> saveMood(String mood) async {
+  /// Load all day entries for timeline view
+  Future<void> loadAllDayEntries({int totalDays = 30}) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      _error = 'No authenticated user';
+      return;
+    }
+
+    _setLoading(true);
+    _totalDays = totalDays;
+    _error = null;
+    try {
+      final dayNumbers = List.generate(totalDays, (index) => index + 1);
+      _dayEntries = await _repository.getDayEntries(user.uid, dayNumbers);
+      debugPrint('✅ Loaded ${_dayEntries.length} day entries');
+    } catch (e) {
+      _error = e.toString();
+      debugPrint('❌ Error loading day entries: $e');
+    } finally {
+      _setLoading(false);
+      notifyListeners();
+    }
+  }
+
+  /// Get date for a specific day number
+  DateTime? getDateForDay(int dayNumber) {
+    if (_journeyStartDate == null) return null;
+    return _journeyStartDate!.add(Duration(days: dayNumber - 1));
+  }
+
+  /// Load entry for a specific day
+  Future<void> loadDayEntry(int dayNumber) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final entry = await _repository.getDayEntry(user.uid, dayNumber);
+      if (entry != null) {
+        _dayEntries[dayNumber] = entry;
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading day entry: $e');
+    }
+  }
+
+  int _viewingDay = 1;
+
+  /// Load data for a specific day
+  Future<void> loadDayData(int dayNumber) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       _error = 'No authenticated user';
@@ -66,10 +123,53 @@ class JourneyController extends ChangeNotifier {
 
     _setLoading(true);
     _error = null;
+    _viewingDay = dayNumber;
+    
     try {
-      await _repository.saveMood(user.uid, _currentDay, mood);
+      final dayEntry = await _repository.getDayEntry(user.uid, dayNumber);
+      if (dayEntry != null) {
+        _currentMood = dayEntry['mood'] as String?;
+        _journalEntry = dayEntry['journalEntry'] as String?;
+      } else {
+        _currentMood = null;
+        _journalEntry = null;
+      }
+      debugPrint('✅ Loaded day $dayNumber data');
+    } catch (e) {
+      _error = e.toString();
+      debugPrint('❌ Error loading day data: $e');
+    } finally {
+      _setLoading(false);
+      notifyListeners();
+    }
+  }
+
+  /// Save mood selection
+  Future<void> saveMood(String mood, {int? dayNumber}) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      _error = 'No authenticated user';
+      return;
+    }
+
+    final targetDay = dayNumber ?? _viewingDay;
+    _setLoading(true);
+    _error = null;
+    try {
+      await _repository.saveMood(user.uid, targetDay, mood);
+      
+      // Update local state
+      if (targetDay == _currentDay || targetDay == _viewingDay) {
       _currentMood = mood;
-      debugPrint('✅ Mood saved: $mood');
+      }
+      
+      // Update entries map
+      _dayEntries[targetDay] = {
+        ...(_dayEntries[targetDay] ?? {}),
+        'mood': mood,
+      };
+      
+      debugPrint('✅ Mood saved: $mood for day $targetDay');
     } catch (e) {
       _error = e.toString();
       debugPrint('❌ Error saving mood: $e');
@@ -80,19 +180,31 @@ class JourneyController extends ChangeNotifier {
   }
 
   /// Save journal entry
-  Future<void> saveJournalEntry(String entry) async {
+  Future<void> saveJournalEntry(String entry, {int? dayNumber}) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       _error = 'No authenticated user';
       return;
     }
 
+    final targetDay = dayNumber ?? _viewingDay;
     _setLoading(true);
     _error = null;
     try {
-      await _repository.saveJournalEntry(user.uid, _currentDay, entry);
+      await _repository.saveJournalEntry(user.uid, targetDay, entry);
+      
+      // Update local state
+      if (targetDay == _currentDay || targetDay == _viewingDay) {
       _journalEntry = entry;
-      debugPrint('✅ Journal entry saved');
+      }
+      
+      // Update entries map
+      _dayEntries[targetDay] = {
+        ...(_dayEntries[targetDay] ?? {}),
+        'journalEntry': entry,
+      };
+      
+      debugPrint('✅ Journal entry saved for day $targetDay');
     } catch (e) {
       _error = e.toString();
       debugPrint('❌ Error saving journal entry: $e');

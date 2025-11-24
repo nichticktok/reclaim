@@ -37,5 +37,9 @@ class AppEnv {
   static bool get isDev => environment == 'dev';
   static bool get isProd => environment == 'prod';
   static bool get isQa => environment == 'qa';
+
+  // AI Configuration
+  static const String geminiApiKey =
+      String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
 }
 
