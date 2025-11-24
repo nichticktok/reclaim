@@ -56,5 +56,6 @@ jobs:
         uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io  # Explicitly set SonarCloud URL
         continue-on-error: true  # Don't fail if SonarQube is not configured
 

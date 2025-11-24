@@ -46,17 +46,32 @@ class _ProgressScreenState extends State<ProgressScreen> {
             );
           }
 
-          final habits = tasksController.habits;
+          final allHabits = tasksController.habits;
+          
+          // Filter habits to show only today's items (for most categories)
+          final today = DateTime.now();
+          final todayHabits = allHabits
+              .where((habit) => habit.isScheduledForDate(today))
+              .toList();
+          
+          // Determine which habits to use based on category
+          // Sleep, Water, and Exercise show ALL habits (not just today)
+          // Other categories show only today's habits
+          final bool showAllHabits = _selectedCategory == "Sleep" || 
+                                     _selectedCategory == "Water" || 
+                                     _selectedCategory == "Exercise";
+          
+          final habitsToUse = showAllHabits ? allHabits : todayHabits;
           
           // Recalculate progress from current tasks if the habits state has changed
           // This ensures progress updates immediately when tasks change (including completion status)
-          final currentHabitsHash = _getHabitsHash(habits);
+          final currentHabitsHash = _getHabitsHash(habitsToUse);
           final habitsChanged = currentHabitsHash != _lastHabitsHash;
           
-          if (habits.isNotEmpty && habitsChanged) {
+          if (habitsToUse.isNotEmpty && habitsChanged) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) {
-                progressController.calculateProgressFromTasks(habits);
+                progressController.calculateProgressFromTasks(habitsToUse);
                 setState(() {
                   _lastHabitsHash = currentHabitsHash;
                 });
@@ -75,9 +90,11 @@ class _ProgressScreenState extends State<ProgressScreen> {
           final statusInfo = _getStatusInfo(progressPercent, daysActive);
 
           // Filter habits by category
+          // For Sleep, Water, Exercise: show all habits matching the category
+          // For other categories: show only today's habits matching the category
           final filteredHabits = _selectedCategory == "All"
-              ? habits
-              : habits.where((h) {
+              ? (showAllHabits ? allHabits : todayHabits)
+              : habitsToUse.where((h) {
                   final title = h.title.toLowerCase();
                   switch (_selectedCategory) {
                     case "Sleep":
