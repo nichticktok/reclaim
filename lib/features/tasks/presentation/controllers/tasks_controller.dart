@@ -490,10 +490,21 @@ class TasksController extends ChangeNotifier {
 
   /// Elevated access deletion - bypasses accountability requirement (DEBUG MODE ONLY)
   /// This method directly deletes a habit without requiring approval
-  Future<void> deleteHabitElevated(String habitId, String reason) async {
+  /// NOTE: Future tasks cannot be deleted even with elevated access
+  Future<void> deleteHabitElevated(String habitId, String reason, {DateTime? viewDate}) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception('No authenticated user');
+      
+      // Check if this is a future task - prevent deletion even with elevated access
+      if (viewDate != null) {
+        final today = DateTime.now();
+        final todayNormalized = DateTime(today.year, today.month, today.day);
+        final viewDateNormalized = DateTime(viewDate.year, viewDate.month, viewDate.day);
+        if (viewDateNormalized.isAfter(todayNormalized)) {
+          throw Exception('Future tasks cannot be deleted, even with elevated access.');
+        }
+      }
       
       // Direct deletion without checking for approval
       await _repository.deleteHabit(habitId, reason);
@@ -537,10 +548,21 @@ class TasksController extends ChangeNotifier {
     required String reason,
     required String accountabilityPartnerContact,
     required String contactType, // 'phone' or 'email'
+    DateTime? viewDate, // The date being viewed (to check if it's a future task)
   }) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception('No authenticated user');
+
+      // Prevent deletion requests for future tasks
+      if (viewDate != null) {
+        final today = DateTime.now();
+        final todayNormalized = DateTime(today.year, today.month, today.day);
+        final viewDateNormalized = DateTime(viewDate.year, viewDate.month, viewDate.day);
+        if (viewDateNormalized.isAfter(todayNormalized)) {
+          throw Exception('Future tasks cannot be deleted. You can only delete tasks for today or past dates.');
+        }
+      }
 
       // Validate contact format
       if (!accountabilityService.isValidContact(accountabilityPartnerContact, contactType)) {

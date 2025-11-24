@@ -41,6 +41,15 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
            _viewDate!.month == today.month && 
            _viewDate!.day == today.day;
   }
+  
+  /// Check if the viewed date is in the future (future tasks cannot be deleted)
+  bool get _isFutureTask {
+    if (_viewDate == null) return false; // Default to not future if no date specified
+    final today = DateTime.now();
+    final todayNormalized = DateTime(today.year, today.month, today.day);
+    final viewDateNormalized = DateTime(_viewDate!.year, _viewDate!.month, _viewDate!.day);
+    return viewDateNormalized.isAfter(todayNormalized);
+  }
 
   @override
   void initState() {
@@ -332,6 +341,19 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   /// Show delete confirmation dialog with accountability partner requirement
   Future<void> _showDeleteDialog(BuildContext context, TasksController controller) async {
+    // Safety check: Don't allow deletion of future tasks
+    if (_isFutureTask) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Future tasks cannot be deleted.'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+    
     // Safety check: Don't allow deletion of completed tasks
     // Note: Deletion removes the task from user's habits only, not from preset tasks collection
     final viewDateForDelete = _viewDate ?? DateTime.now();
@@ -601,6 +623,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     reason: reason,
                     accountabilityPartnerContact: contact,
                     contactType: selectedContactType,
+                    viewDate: _viewDate,
                   );
                   
                 if (!context.mounted) return;
@@ -933,8 +956,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
             const SizedBox(height: 30),
 
-            // Completion Status - Hide if deletion is pending or if it's a plan/workout task (they don't show "Task Pending")
-            if (!hasPendingDeletion && !isPlanOrWorkoutTask)
+            // Completion Status - Hide if deletion is pending, if it's a plan/workout task, or if it's a future task
+            // Future tasks don't show "Task Pending" status
+            if (!hasPendingDeletion && !isPlanOrWorkoutTask && !_isFutureTask)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -1193,16 +1217,22 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             ],
             if (!_canCompleteTask && !hasPendingDeletion) ...[
               const SizedBox(height: 8),
-              const Text(
-                "You can only complete tasks for today. This is a view-only mode for other dates.",
-                style: TextStyle(color: Colors.orangeAccent, fontSize: 13),
+              Text(
+                _isFutureTask
+                    ? "Future Task, cannot be edited."
+                    : "You can only complete tasks for today. This is a view-only mode for other dates.",
+                style: TextStyle(
+                  color: _isFutureTask ? Colors.orange : Colors.orangeAccent,
+                  fontSize: 13,
+                ),
                 textAlign: TextAlign.center,
               ),
             ],
             
             // Delete Button - Show for all tasks (preset or user-added), but only for incomplete tasks
             // When deleted, it only removes from user's habits, not from preset tasks collection
-            if (_habit != null && !_habit!.isCompletedForDate(viewDate)) ...[
+            // Hide delete button for future tasks (they cannot be deleted)
+            if (_habit != null && !_habit!.isCompletedForDate(viewDate) && !_isFutureTask) ...[
               // Hide delete button for plan tasks and workout tasks (they can only be deleted by deleting the plan/workout)
               if (!isPlanOrWorkoutTask) ...[
                 const SizedBox(height: 20),
@@ -1261,7 +1291,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 ),
               ],
               // Elevated Access Deletion Button (DEBUG MODE ONLY)
-              if (kDebugMode && !isPlanOrWorkoutTask) ...[
+              // Also hide for future tasks (cannot be deleted even with elevated access)
+              if (kDebugMode && !isPlanOrWorkoutTask && !_isFutureTask) ...[
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
@@ -1330,6 +1361,19 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   /// Handle elevated access deletion (DEBUG MODE ONLY)
   Future<void> _handleElevatedDeletion(BuildContext context, TasksController controller) async {
     if (_habit == null) return;
+    
+    // Prevent deletion of future tasks even with elevated access
+    if (_isFutureTask) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Future tasks cannot be deleted, even with elevated access.'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
     
     final parentContext = context;
     if (!parentContext.mounted) return;
@@ -1409,7 +1453,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       });
 
       // Use elevated access deletion (bypasses accountability)
-      await controller.deleteHabitElevated(_habit!.id, 'Elevated access deletion (debug mode)');
+      await controller.deleteHabitElevated(_habit!.id, 'Elevated access deletion (debug mode)', viewDate: _viewDate);
       
       if (!mounted || !parentContext.mounted) return;
       
@@ -1537,8 +1581,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     if (!_canCompleteTask) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('You can only complete tasks for today.'),
+        SnackBar(
+          content: Text(_isFutureTask 
+              ? 'Future task deleted Cannot edit'
+              : 'You can only complete tasks for today.'),
           backgroundColor: Colors.orange,
         ),
       );

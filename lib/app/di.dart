@@ -24,6 +24,9 @@ import '../features/milestone/presentation/controllers/milestone_controller.dart
 import '../features/achievements/presentation/controllers/achievements_controller.dart';
 import '../features/projects/presentation/controllers/projects_controller.dart';
 import '../features/workouts/presentation/controllers/workouts_controller.dart';
+import '../features/diet/presentation/controllers/diet_controller.dart';
+import '../features/book_summary/presentation/controllers/book_summary_controller.dart';
+import '../features/workout_counter/presentation/controllers/workout_counter_controller.dart';
 import '../features/tools/presentation/controllers/screen_blocker_controller.dart';
 
 /// Dependency Injection / Providers Setup
@@ -137,6 +140,18 @@ class AppProviders {
         controller.setAccountabilityService(accountabilityService);
         return controller;
       },
+      lazy: true,
+    ),
+    ChangeNotifierProvider<DietController>(
+      create: (_) => DietController(),
+      lazy: true,
+    ),
+    ChangeNotifierProvider<BookSummaryController>(
+      create: (_) => BookSummaryController(),
+      lazy: true,
+    ),
+    ChangeNotifierProvider<WorkoutCounterController>(
+      create: (_) => WorkoutCounterController(),
       lazy: true,
     ),
     ChangeNotifierProvider<ScreenBlockerController>(

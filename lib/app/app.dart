@@ -12,6 +12,9 @@ import '../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../features/tasks/presentation/screens/task_detail_screen.dart';
 import '../features/projects/presentation/screens/create_project_screen.dart';
 import '../features/workouts/presentation/screens/workout_setup_screen.dart';
+import '../features/diet/presentation/screens/diet_setup_screen.dart';
+import '../features/book_summary/presentation/screens/book_summary_list_screen.dart';
+import '../features/workout_counter/presentation/screens/custom_workout_list_screen.dart';
 import '../features/web/landing_page.dart';
 import 'package:recalim/core/providers/language_provider.dart';
 import '../features/tools/presentation/widgets/screen_blocker_overlay.dart';
@@ -49,6 +52,9 @@ class ReclaimApp extends StatelessWidget {
         '/task_detail': (context) => const TaskDetailScreen(),
         '/create_project': (context) => const CreateProjectScreen(),
         '/workout_setup': (context) => const WorkoutSetupScreen(),
+        '/diet_setup': (context) => const DietSetupScreen(),
+        '/book_summary_list': (context) => const BookSummaryListScreen(),
+        '/workout_counter': (context) => const CustomWorkoutListScreen(),
       },
       home: kIsWeb
           ? const LandingPage()

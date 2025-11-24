@@ -83,9 +83,9 @@ class ToolsScreen extends StatelessWidget {
               crossAxisCount: 2,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 0.85,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              childAspectRatio: 1.6,
               children: [
                 _buildToolCard(
                   context: context,
@@ -100,6 +100,9 @@ class ToolsScreen extends StatelessWidget {
                   subtitle: "Key insights from books",
                   gradient: [const Color(0xFF8E44AD), const Color(0xFFA569BD)],
                   icon: Icons.menu_book,
+                  onTap: () {
+                    Navigator.pushNamed(context, '/book_summary_list');
+                  },
                 ),
                 _buildToolCard(
                   context: context,
@@ -129,6 +132,9 @@ class ToolsScreen extends StatelessWidget {
                   subtitle: "Track your workouts",
                   gradient: [const Color(0xFFFF6B35), const Color(0xFFFF8C5A)],
                   icon: Icons.fitness_center,
+                  onTap: () {
+                    Navigator.pushNamed(context, '/workout_counter');
+                  },
                 ),
                 _buildToolCard(
                   context: context,
@@ -163,6 +169,16 @@ class ToolsScreen extends StatelessWidget {
                   icon: Icons.fitness_center,
                   onTap: () {
                     Navigator.pushNamed(context, '/workout_setup');
+                  },
+                ),
+                _buildToolCard(
+                  context: context,
+                  title: "Diet Plan AI",
+                  subtitle: "Personalized meal plans",
+                  gradient: [const Color(0xFF4CAF50), const Color(0xFF66BB6A)],
+                  icon: Icons.restaurant_menu,
+                  onTap: () {
+                    Navigator.pushNamed(context, '/diet_setup');
                   },
                 ),
                 _buildNewToolCard(context),
@@ -200,7 +216,7 @@ class ToolsScreen extends StatelessWidget {
             end: Alignment.bottomRight,
             colors: gradient,
           ),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.3),
@@ -215,7 +231,7 @@ class ToolsScreen extends StatelessWidget {
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(16),
                   gradient: LinearGradient(
                     begin: Alignment.topRight,
                     end: Alignment.bottomLeft,
@@ -229,7 +245,7 @@ class ToolsScreen extends StatelessWidget {
             ),
             // Content
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -237,24 +253,28 @@ class ToolsScreen extends StatelessWidget {
                   Icon(
                     icon,
                     color: Colors.white,
-                    size: 32,
+                    size: 20,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 4),
                   Text(
                     title,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
+                      letterSpacing: 0.2,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
                     subtitle,
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.9),
+                      color: Colors.white.withValues(alpha: 0.95),
                       fontSize: 12,
+                      fontWeight: FontWeight.w500,
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -292,7 +312,7 @@ class ToolsScreen extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: const Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: Colors.white.withValues(alpha: 0.2),
             width: 1,
