@@ -49,7 +49,9 @@ app.*.map.json
 env/.env
 .env
 *.env
-assets/.env
+# Exception: assets/.env is allowed ONLY if it contains NO real API keys (template only)
+# This file is needed for Flutter builds. If you add real keys, they will be committed!
+!assets/.env
 # Exception: .env.example template files are safe to commit (no real keys)
 !assets/.env.example
 !env/.env.example
