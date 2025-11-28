@@ -43,11 +43,9 @@ class FirestoreWorkoutRepository implements WorkoutRepository {
   @override
   Future<WorkoutPlanModel?> getActiveWorkoutPlan(String userId) async {
     final plans = await getUserWorkoutPlans(userId);
-    try {
-      return plans.firstWhere((p) => p.status == 'active');
-    } catch (e) {
-      return null; // No active plan
-    }
+    // Use where().firstOrNull pattern to avoid StateError
+    final activePlans = plans.where((p) => p.status == 'active');
+    return activePlans.isEmpty ? null : activePlans.first;
   }
 
   @override

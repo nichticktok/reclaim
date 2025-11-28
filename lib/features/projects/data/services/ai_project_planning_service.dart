@@ -249,7 +249,9 @@ Create a complete project plan that includes:
 1. PHASES AND TASKS: Break down the project into phases and tasks
    - Decide how many phases are needed
    - Name each phase appropriately
-   - List tasks within each phase
+   - List ONLY actionable tasks within each phase (NOT parent topics or categories)
+   - Each task should be a specific, concrete action item
+   - DO NOT create tasks for parent topics/categories - only create tasks for the actual work items
    - Each task should have: title, description, estimated hours
 
 2. DAY-BY-DAY SCHEDULE: Create a detailed daily schedule
@@ -267,7 +269,10 @@ Create a complete project plan that includes:
 IMPORTANT GUIDELINES:
 - Make it realistic and achievable for this specific project
 - Total estimated hours across all tasks should be close to ${totalHours.toStringAsFixed(1)} hours
-- Tasks should be specific and actionable
+- Tasks should be specific and actionable - NOT parent topics or categories
+- DO NOT create separate tasks for parent topics (e.g., "Gear Checkup") and subtopics (e.g., "Learn string names")
+- ONLY create tasks for the actual actionable items (the subtopics)
+- If you have a topic like "Gear Checkup and setup" with subtasks, create ONLY the subtask tasks, not the parent topic
 - Consider the project category (${input.category}) when structuring
 - Think about what makes sense for this particular project, not generic templates
 - Each day should have a clear purpose and achievable workload
@@ -415,32 +420,54 @@ Example structure:
           tasksJson = phase['items'] as List<dynamic>;
         }
         
-        final tasks = tasksJson.map((taskJson) {
-          final task = taskJson is Map<String, dynamic> 
-              ? taskJson 
-              : Map<String, dynamic>.from(taskJson as Map);
+        // Helper function to parse tasks and extract subtasks from parent topics
+        List<PhaseTask> parseTasks(List<dynamic> tasksList) {
+          final List<PhaseTask> result = [];
           
-          // Handle different possible field names for hours
-          double hours = 1.0;
-          if (task.containsKey('estimatedHours')) {
-            hours = (task['estimatedHours'] as num).toDouble();
-          } else if (task.containsKey('estimated_hours')) {
-            hours = (task['estimated_hours'] as num).toDouble();
-          } else if (task.containsKey('hours')) {
-            hours = (task['hours'] as num).toDouble();
-          } else if (task.containsKey('time')) {
-            hours = (task['time'] as num).toDouble();
+          for (var taskJson in tasksList) {
+            final task = taskJson is Map<String, dynamic> 
+                ? taskJson 
+                : Map<String, dynamic>.from(taskJson as Map);
+            
+            // If this task has subtasks, extract and process only the subtasks
+            if (task.containsKey('subtasks') || task.containsKey('tasks')) {
+              // This is a parent topic - extract its subtasks instead
+              final subtasksJson = task['subtasks'] as List<dynamic>? 
+                  ?? task['tasks'] as List<dynamic>? 
+                  ?? [];
+              
+              // Recursively parse subtasks (they might have nested subtasks too)
+              result.addAll(parseTasks(subtasksJson));
+              // Skip the parent topic itself
+              continue;
+            }
+            
+            // This is an actual actionable task, parse it
+            double hours = 1.0;
+            if (task.containsKey('estimatedHours')) {
+              hours = (task['estimatedHours'] as num).toDouble();
+            } else if (task.containsKey('estimated_hours')) {
+              hours = (task['estimated_hours'] as num).toDouble();
+            } else if (task.containsKey('hours')) {
+              hours = (task['hours'] as num).toDouble();
+            } else if (task.containsKey('time')) {
+              hours = (task['time'] as num).toDouble();
+            }
+            
+            result.add(PhaseTask(
+              title: task['title'] as String? 
+                  ?? task['task_title'] as String?
+                  ?? task['name'] as String? 
+                  ?? 'Untitled Task',
+              description: task['description'] as String? ?? task['desc'] as String? ?? '',
+              estimatedHours: hours,
+            ));
           }
           
-          return PhaseTask(
-            title: task['title'] as String? 
-                ?? task['task_title'] as String?
-                ?? task['name'] as String? 
-                ?? 'Untitled Task',
-            description: task['description'] as String? ?? task['desc'] as String? ?? '',
-            estimatedHours: hours,
-          );
-        }).toList();
+          return result;
+        }
+        
+        final tasks = parseTasks(tasksJson);
         
         return Phase(
           title: phase['title'] as String? 

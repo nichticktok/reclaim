@@ -303,14 +303,14 @@ class _ProgressScreenState extends State<ProgressScreen> {
             end: Alignment.bottomCenter,
             colors: [
               statusColor,
-              statusColor.withOpacity(0.9),
-              statusColor.withOpacity(0.7),
+              statusColor.withValues(alpha: 0.9),
+              statusColor.withValues(alpha: 0.7),
             ],
             stops: const [0.0, 0.5, 1.0],
           ),
           boxShadow: [
             BoxShadow(
-              color: statusColor.withOpacity(0.3),
+              color: statusColor.withValues(alpha: 0.3),
               blurRadius: 20,
               offset: const Offset(0, 4),
             ),
@@ -582,12 +582,12 @@ class _ProgressScreenState extends State<ProgressScreen> {
             colors: [
               gradientColors[0],
               gradientColors[1],
-              gradientColors[0].withOpacity(0.8),
+              gradientColors[0].withValues(alpha: 0.8),
             ],
           ),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: attributeColor.withOpacity(0.3),
+            color: attributeColor.withValues(alpha: 0.3),
             width: 1.5,
           ),
           boxShadow: AppDesignSystem.getColoredShadow(attributeColor),

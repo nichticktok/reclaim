@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 
 /// Modern design system inspired by top self-improvement apps
@@ -135,7 +134,7 @@ class AppDesignSystem {
   
   static List<BoxShadow> get shadowSmall => [
     BoxShadow(
-      color: Colors.black.withOpacity(0.2),
+      color: Colors.black.withValues(alpha: 0.2),
       blurRadius: 4,
       offset: const Offset(0, 2),
     ),
@@ -143,7 +142,7 @@ class AppDesignSystem {
   
   static List<BoxShadow> get shadowMedium => [
     BoxShadow(
-      color: Colors.black.withOpacity(0.3),
+      color: Colors.black.withValues(alpha: 0.3),
       blurRadius: 8,
       offset: const Offset(0, 4),
     ),
@@ -151,7 +150,7 @@ class AppDesignSystem {
   
   static List<BoxShadow> get shadowLarge => [
     BoxShadow(
-      color: Colors.black.withOpacity(0.4),
+      color: Colors.black.withValues(alpha: 0.4),
       blurRadius: 16,
       offset: const Offset(0, 8),
     ),
@@ -160,13 +159,13 @@ class AppDesignSystem {
   // Colored shadows for cards
   static List<BoxShadow> getColoredShadow(Color color) => [
     BoxShadow(
-      color: color.withOpacity(0.4),
+      color: color.withValues(alpha: 0.4),
       blurRadius: 16,
       offset: const Offset(0, 6),
       spreadRadius: 0,
     ),
     BoxShadow(
-      color: Colors.black.withOpacity(0.3),
+      color: Colors.black.withValues(alpha: 0.3),
       blurRadius: 12,
       offset: const Offset(0, 4),
     ),
@@ -180,10 +179,10 @@ class AppDesignSystem {
     Border? border,
   }) {
     return BoxDecoration(
-      color: (color ?? surface).withOpacity(0.7),
+      color: (color ?? surface).withValues(alpha: 0.7),
       borderRadius: BorderRadius.circular(borderRadius),
       border: border ?? Border.all(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withValues(alpha: 0.1),
         width: 1,
       ),
       boxShadow: shadowMedium,
@@ -233,7 +232,7 @@ class AppDesignSystem {
       borderRadius: BorderRadius.circular(16),
       boxShadow: isActive ? [
         BoxShadow(
-          color: primary.withOpacity(0.4),
+          color: primary.withValues(alpha: 0.4),
           blurRadius: 12,
           offset: const Offset(0, 4),
         ),
@@ -370,7 +369,7 @@ class AppDesignSystem {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.3),
+            color: color.withValues(alpha: 0.3),
             blurRadius: radius,
             spreadRadius: radius * 0.5,
           ),

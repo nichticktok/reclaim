@@ -8,12 +8,25 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:recalim/core/models/habit_model.dart';
 import 'package:recalim/core/models/proof_submission_model.dart';
 import 'package:recalim/core/models/deletion_request_model.dart';
+import 'package:recalim/core/models/project_model.dart';
 import 'package:recalim/core/constants/proof_types.dart';
+import 'package:recalim/core/constants/project_proof_types.dart';
 import '../../../../core/utils/attribute_utils.dart';
 import '../controllers/tasks_controller.dart';
 import '../../../progress/presentation/controllers/progress_controller.dart';
 import '../../../achievements/presentation/controllers/achievements_controller.dart';
 import 'interactive_workout_screen.dart';
+import '../../../projects/presentation/screens/project_work_session_screen.dart';
+import '../../../projects/presentation/widgets/reflection_questions_dialog.dart';
+import '../../../projects/presentation/widgets/micro_quiz_dialog.dart';
+import '../../../projects/presentation/widgets/media_capture_dialog.dart';
+import '../../../projects/presentation/widgets/external_output_dialog.dart';
+import '../../../projects/data/services/ai_reflection_service.dart';
+import '../../../projects/data/services/quiz_template_service.dart';
+import '../../../projects/data/repositories/firestore_project_proof_repository.dart';
+import '../../../projects/domain/repositories/project_proof_repository.dart';
+import '../../../projects/domain/entities/multiple_choice_question.dart';
+import '../../../../core/models/project_task_proof.dart';
 
 class TaskDetailScreen extends StatefulWidget {
   const TaskDetailScreen({super.key});
@@ -24,14 +37,25 @@ class TaskDetailScreen extends StatefulWidget {
 
 class _TaskDetailScreenState extends State<TaskDetailScreen> {
   final TextEditingController _proofController = TextEditingController();
+  final ProjectProofRepository _projectProofRepository = FirestoreProjectProofRepository();
   HabitModel? _habit;
   bool _isLoading = false;
   bool _hasInitialized = false;
   DateTime? _viewDate; // The date being viewed (for checking if it's today)
   DeletionRequestModel? _pendingDeletionRequest; // Track pending deletion request
   String? _lastLoadedHabitId; // Track which habit ID we last loaded deletion request for
+  ProjectTaskProof? _projectProof; // Project proof with review data
 
   bool get _isWorkoutTask => _habit?.metadata['type'] == 'workout';
+  bool get _isProjectTask {
+    if (_habit == null) return false;
+    final metadata = _habit!.metadata;
+    // Check if it's a project task by type or by having project-related metadata
+    return metadata['type'] == 'project' || 
+           (metadata['projectId'] != null && metadata['taskId'] != null);
+  }
+  String? get _projectProofType => _habit?.metadata['suggestedProofType'] as String?;
+  String? get _projectId => _habit?.metadata['projectId'] as String?;
   
   /// Check if the viewed date is today (only today allows completion)
   bool get _canCompleteTask {
@@ -132,6 +156,203 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   /// Handle workout completion from interactive workout screen
   /// The interactive workout itself serves as proof, so no additional proof input is needed
+  Future<bool?> _collectProjectProof() async {
+    if (_habit == null) {
+      return false;
+    }
+    
+    // Get proof type and project ID, with fallbacks
+    final proofType = _projectProofType ?? ProjectProofTypes.timedSession;
+    final projectId = _projectId ?? _habit!.metadata['projectId'] as String?;
+    
+    if (projectId == null) {
+      debugPrint('❌ Cannot collect project proof: missing projectId');
+      return false;
+    }
+
+    // Create a temporary ProjectTaskModel from habit metadata
+    final task = ProjectTaskModel(
+      id: _habit!.metadata['taskId'] as String? ?? '',
+      milestoneId: _habit!.metadata['milestoneId'] as String? ?? '',
+      title: _habit!.title,
+      description: _habit!.description,
+      estimatedHours: (_habit!.metadata['estimatedHours'] as num?)?.toDouble() ?? 0.0,
+      dueDate: _viewDate,
+      status: 'pending',
+      suggestedProofType: proofType,
+      alternativeProofTypes: (_habit!.metadata['alternativeProofTypes'] as List<dynamic>?)
+          ?.map((e) => e.toString())
+          .toList() ?? [],
+      proofMechanism: _habit!.metadata['proofMechanism'] as String?,
+      requiresProof: _habit!.metadata['requiresProof'] as bool? ?? true,
+    );
+
+    final projectCategory = _habit!.metadata['projectCategory'] as String? ?? 'general';
+    bool? proofSubmitted = false;
+
+    switch (proofType) {
+      case ProjectProofTypes.timedSession:
+        proofSubmitted = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProjectWorkSessionScreen(
+              task: task,
+              projectId: projectId,
+            ),
+          ),
+        );
+        break;
+
+      case ProjectProofTypes.reflectionNote:
+        // Check if it's a learning task (use micro-quiz) or regular reflection
+        final quizService = QuizTemplateService();
+        final questions = quizService.getQuizQuestions(task, projectCategory);
+        
+        // Use micro-quiz for learning tasks, reflection for others
+        if (questions.length == 2 && questions.first.question.toLowerCase().contains('main idea')) {
+          proofSubmitted = await showDialog<bool>(
+            context: context,
+            builder: (context) => MicroQuizDialog(
+              task: task,
+              category: projectCategory,
+              questions: questions,
+            ),
+          );
+        } else {
+          // Generate AI reflection questions
+          try {
+            final reflectionService = AIReflectionService();
+            final reflectionQuestions = await reflectionService.generateReflectionQuestions(
+              task,
+              projectCategory,
+            );
+            if (!mounted) return false;
+            proofSubmitted = await showDialog<bool>(
+              context: context,
+              builder: (context) => ReflectionQuestionsDialog(
+                task: task,
+                questions: reflectionQuestions,
+              ),
+            );
+          } catch (e) {
+            // Fallback to template questions
+            if (!mounted) return false;
+            proofSubmitted = await showDialog<bool>(
+              context: context,
+              builder: (context) => ReflectionQuestionsDialog(
+                task: task,
+                questions: questions,
+              ),
+            );
+          }
+        }
+        break;
+
+      case ProjectProofTypes.smallMediaClip:
+        proofSubmitted = await showDialog<bool>(
+          context: context,
+          builder: (context) => MediaCaptureDialog(task: task),
+        );
+        break;
+
+      case ProjectProofTypes.externalOutput:
+        proofSubmitted = await showDialog<bool>(
+          context: context,
+          builder: (context) => ExternalOutputDialog(task: task),
+        );
+        break;
+
+      default:
+        // Default to timed session
+        proofSubmitted = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProjectWorkSessionScreen(
+              task: task,
+              projectId: projectId,
+            ),
+          ),
+        );
+    }
+
+    // If proof was submitted, update the habit's proof map and reload
+    if (proofSubmitted == true && mounted && _habit != null) {
+      // Store references before async operations
+      final habitId = _habit!.id;
+      
+      // Initial reload to get proof data (validation might not be done yet)
+      await _loadProjectProof();
+      
+      // Wait a bit for background validation to complete, then reload proof and complete task if needed
+      // This allows validation to finish without blocking navigation
+      Future.delayed(const Duration(seconds: 3), () async {
+        // Check mounted before any context access
+        if (!mounted) return;
+        
+        try {
+          // Get fresh controller reference inside the callback
+          final currentContext = context;
+          if (!currentContext.mounted) return;
+          
+          final controller = currentContext.read<TasksController>();
+          
+          // Reload habit to ensure we have the latest data
+          if (!mounted) return;
+          final habit = await controller.getHabitById(habitId);
+          if (!mounted) return;
+          
+          // Load proof data
+          await _loadProjectProof();
+          
+          // After validation completes, check if all answers are correct
+          final proof = _projectProof;
+          if (proof != null && proof.needsReview != true) {
+            // All answers correct - update habit's proof and complete the task
+            final proofText = 'Project proof submitted (${ProjectProofTypes.getDisplayName(proofType)})';
+            
+            // Update habit's proof map and mark as complete
+            await controller.submitProof(habit, proofText);
+            await controller.completeHabit(habit, proof: proofText);
+            
+            debugPrint('✅ All answers correct - task marked as complete');
+            
+            // Reload habit data to reflect completion
+            if (mounted) {
+              await _loadHabitData();
+            }
+            
+            if (mounted) {
+              setState(() {
+                // Trigger rebuild to show completion status
+              });
+            }
+          } else if (proof?.needsReview == true) {
+            debugPrint('⚠️ Proof needs review - task will remain incomplete until reviewed');
+            // Reload habit data even if needs review to show the review indicator
+            if (mounted) {
+              await _loadHabitData();
+            }
+            if (mounted) {
+              setState(() {
+                // Trigger rebuild to show review section
+              });
+            }
+          }
+        } catch (e) {
+          debugPrint('Error in delayed validation callback: $e');
+          // Don't crash if context is unavailable
+        }
+      });
+      
+      // Initial proof submission - don't mark as complete yet, wait for validation
+      // The delayed callback above will handle completion after validation completes
+      
+      await _loadHabitData();
+    }
+
+    return proofSubmitted;
+  }
+
   Future<void> _handleWorkoutCompletion(
     TasksController controller,
     Map<String, dynamic> metadata,
@@ -333,9 +554,35 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         });
         // Always reload pending deletion request when loading habit data
         await _loadPendingDeletionRequest();
+        // Load project proof if it's a project task
+        if (_isProjectTask) {
+          await _loadProjectProof();
+        }
       }
     } catch (e) {
       debugPrint('Error loading habit: $e');
+    }
+  }
+
+  Future<void> _loadProjectProof() async {
+    if (!_isProjectTask || _habit == null) return;
+    
+    final taskId = _habit!.metadata['taskId'] as String?;
+    if (taskId == null) return;
+    
+    try {
+      final dateKey = DateFormat('yyyy-MM-dd').format(_viewDate ?? DateTime.now());
+      final proofs = await _projectProofRepository.getProofsForTaskOnDate(taskId, dateKey);
+      
+      if (mounted && proofs.isNotEmpty) {
+        // Get the most recent proof
+        final proof = proofs.first;
+        setState(() {
+          _projectProof = proof;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading project proof: $e');
     }
   }
 
@@ -786,6 +1033,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     final hasProof = dateProof != null && dateProof.isNotEmpty;
     final disableCompletionButton = isWorkoutTask && !isCompleted && !hasProof;
     
+    // Check if proof needs review - if so, disable all buttons and show only "I have read" button
+    final proofNeedsReview = _isProjectTask && _projectProof?.needsReview == true;
+    
     // Check deletion status immediately (no async needed - it's in the habit data)
     final hasPendingDeletion = _habit!.deletionStatus == "pending" || 
         (_pendingDeletionRequest != null && _pendingDeletionRequest!.status == DeletionRequestStatus.pending);
@@ -1030,6 +1280,48 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
             // Workout timer section removed - using interactive workout instead
 
+            // Warning message when proof needs review - all buttons disabled until user reviews
+            if (proofNeedsReview && !hasPendingDeletion) ...[
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Answers Need Review',
+                            style: TextStyle(
+                              color: Colors.orange,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Some answers are incorrect. Please review the explanations below before completing the task.',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.7),
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
             // Proof Section - Only show if proof is already submitted (hidden if deletion is pending)
             if (proofRequired && dateProof != null && dateProof.isNotEmpty && !hasPendingDeletion) ...[
               const SizedBox(height: 20),
@@ -1079,8 +1371,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
             const SizedBox(height: 20),
 
-            // Skip Button (only for system-assigned tasks, hidden if deletion is pending)
-            if (canSkip && !hasPendingDeletion) ...[
+            // Skip Button (only for system-assigned tasks, hidden if deletion is pending or proof needs review)
+            if (canSkip && !hasPendingDeletion && !proofNeedsReview) ...[
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
@@ -1130,8 +1422,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               const SizedBox(height: 20),
             ],
 
-            // Interactive Workout Button (for workout tasks)
-            if (isWorkoutTask && !isCompleted && !isSkipped && _canCompleteTask && !hasPendingDeletion) ...[
+            // Interactive Workout Button (for workout tasks, hidden if proof needs review)
+            if (isWorkoutTask && !isCompleted && !isSkipped && _canCompleteTask && !hasPendingDeletion && !proofNeedsReview) ...[
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -1171,8 +1463,43 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               const SizedBox(height: 12),
             ],
 
-            // Complete/Incomplete Button (hidden if deletion is pending, or for workout tasks use interactive workout instead)
-            if (!hasPendingDeletion && !(isWorkoutTask && !isCompleted && _canCompleteTask))
+            // "I have read" Button - Show only when proof needs review (disables all other buttons)
+            if (proofNeedsReview && !hasPendingDeletion) ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _isLoading ? null : () => _showReviewDialog(controller),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: const Icon(Icons.menu_book, color: Colors.white, size: 24),
+                  label: const Text(
+                    'I have read',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Review the explanations below to understand correct and incorrect answers.',
+                style: TextStyle(
+                  color: Colors.orange.withValues(alpha: 0.8),
+                  fontSize: 13,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+
+            // Complete/Incomplete Button (hidden if deletion is pending, proof needs review, or for workout tasks use interactive workout instead)
+            if (!hasPendingDeletion && !proofNeedsReview && !(isWorkoutTask && !isCompleted && _canCompleteTask))
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -1231,8 +1558,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             
             // Delete Button - Show for all tasks (preset or user-added), but only for incomplete tasks
             // When deleted, it only removes from user's habits, not from preset tasks collection
-            // Hide delete button for future tasks (they cannot be deleted)
-            if (_habit != null && !_habit!.isCompletedForDate(viewDate) && !_isFutureTask) ...[
+            // Hide delete button for future tasks (they cannot be deleted) or when proof needs review
+            if (_habit != null && !_habit!.isCompletedForDate(viewDate) && !_isFutureTask && !proofNeedsReview) ...[
               // Hide delete button for plan tasks and workout tasks (they can only be deleted by deleting the plan/workout)
               if (!isPlanOrWorkoutTask) ...[
                 const SizedBox(height: 20),
@@ -1607,17 +1934,68 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       return;
     }
 
-    // If completing and proof is required, show proof dialog first
+    // If completing and proof is required, collect proof first
     if (!_habit!.isCompletedForDate(viewDate)) {
       final proofRequired = controller.isProofRequired(_habit!);
       final existingProof = _habit!.getProofForDate(viewDate);
       
-        if (proofRequired && existingProof == null) {
-          // Show proof input dialog
+      if (proofRequired && existingProof == null) {
+        // Check if this is a project task with project proof types
+        debugPrint('🔍 Checking proof requirement: isProjectTask=$_isProjectTask, proofType=$_projectProofType, projectId=$_projectId');
+        debugPrint('🔍 Habit metadata: ${_habit!.metadata}');
+        
+        if (_isProjectTask) {
+          // If it's a project task but missing proof type, default to timedSession
+          final proofType = _projectProofType ?? ProjectProofTypes.timedSession;
+          final projectId = _projectId ?? _habit!.metadata['projectId'] as String?;
+          
+          if (projectId != null) {
+            debugPrint('✅ Using project proof collection flow: $proofType');
+            // Use project proof collection flow
+            final proofSubmitted = await _collectProjectProof();
+            if (proofSubmitted != true) {
+              debugPrint('❌ Project proof collection cancelled or failed');
+              // User cancelled or proof submission failed
+              return;
+            }
+            debugPrint('✅ Project proof submitted successfully');
+            
+            // Reload proof to check if it needs review
+            await _loadProjectProof();
+            
+            // Check if proof needs review - if so, don't complete the task
+            if (_projectProof?.needsReview == true) {
+              debugPrint('⚠️ Proof needs review - task will not be marked complete');
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please review your answers before completing the task.'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+              }
+              // Reload habit data and return - don't complete
+              await _loadHabitData();
+              if (mounted) {
+                setState(() => _isLoading = false);
+              }
+              return;
+            }
+            
+            // Proof was submitted and validated, continue with completion
+          } else {
+            debugPrint('⚠️ Project task but missing projectId, using regular proof');
+            await _showProofDialog(controller);
+            return;
+          }
+        } else {
+          debugPrint('ℹ️ Using regular proof dialog for non-project task');
+          // Use regular proof dialog for non-project tasks
           await _showProofDialog(controller);
           return;
         }
       }
+    }
 
       setState(() => _isLoading = true);
 
@@ -1854,6 +2232,303 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  Future<void> _showReviewDialog(TasksController controller) async {
+    if (_habit == null || _projectProof == null) return;
+    
+    final reflectionQuestionsData = _projectProof!.sessionData?['reflectionQuestions'] as List<dynamic>?;
+    final userAnswers = _projectProof!.reflectionAnswers;
+    
+    if (reflectionQuestionsData == null || userAnswers == null) return;
+    
+    // Parse MultipleChoiceQuestion objects from sessionData
+    final questions = reflectionQuestionsData
+        .map((q) => MultipleChoiceQuestion.fromMap(Map<String, dynamic>.from(q as Map)))
+        .toList();
+    
+    // Parse user selected indices from reflectionAnswers (stored as strings)
+    final userSelectedIndices = userAnswers
+        .map((a) => int.tryParse(a) ?? -1)
+        .toList();
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.school, color: Colors.orange, size: 24),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Review Analysis',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _habit!.title,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.7),
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.info_outline, color: Colors.orange, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Review your answers below. See which answers are correct and incorrect, along with explanations.',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      ...List.generate(questions.length, (index) {
+                        final question = questions[index];
+                        final userSelectedIndex = index < userSelectedIndices.length 
+                            ? userSelectedIndices[index] 
+                            : -1;
+                        final isCorrect = userSelectedIndex == question.correctOptionIndex;
+                        final userSelectedOption = (userSelectedIndex >= 0 && userSelectedIndex < question.options.length)
+                            ? question.options[userSelectedIndex]
+                            : 'Not answered';
+                        final correctOption = question.options[question.correctOptionIndex];
+                        
+                        if (isCorrect) {
+                          // Correct answer - show in green
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0D0D0F),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  question.question,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Your answer: $userSelectedOption',
+                                        style: const TextStyle(
+                                          color: Colors.green,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '✓ Correct!',
+                                  style: TextStyle(
+                                    color: Colors.green.withValues(alpha: 0.8),
+                                    fontSize: 13,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        } else {
+                          // Incorrect answer - show correction with explanation
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0D0D0F),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  question.question,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.close, color: Colors.red, size: 20),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Your answer: $userSelectedOption',
+                                        style: TextStyle(
+                                          color: Colors.red.withValues(alpha: 0.8),
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Correct answer: $correctOption',
+                                        style: const TextStyle(
+                                          color: Colors.green,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Icon(Icons.lightbulb_outline, color: Colors.blue, size: 18),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'You selected "$userSelectedOption" which is incorrect. The correct answer is "$correctOption". Please review and learn the correct answer.',
+                                          style: TextStyle(
+                                            color: Colors.white.withValues(alpha: 0.9),
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                      }),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _isLoading ? null : () async {
+                    // Mark proof as reviewed and complete task
+                    if (_projectProof != null) {
+                      try {
+                        final updatedProof = _projectProof!.copyWith(
+                          needsReview: false,
+                        );
+                        await _projectProofRepository.updateProof(updatedProof);
+                        
+                        // Complete the task
+                        if (_habit != null && mounted) {
+                          await controller.completeHabit(_habit!, proof: 'Project proof reviewed and completed');
+                          
+                          // Reload habit data
+                          await _loadHabitData();
+                        }
+                        
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Task completed! ✅'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        debugPrint('Error completing task after review: $e');
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error: ${e.toString()}'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  icon: const Icon(Icons.check_circle, color: Colors.white),
+                  label: const Text(
+                    'I Learned - Complete Task',
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showEditProofDialog(TasksController controller) {

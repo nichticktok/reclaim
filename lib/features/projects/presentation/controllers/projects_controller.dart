@@ -11,6 +11,7 @@ import '../../domain/repositories/plan_repository.dart';
 import '../../data/repositories/firestore_project_repository.dart';
 import '../../data/repositories/firestore_plan_repository.dart';
 import '../../data/services/ai_project_planning_service.dart';
+import '../../data/services/ai_proof_suggestion_service.dart';
 import '../../../tasks/domain/repositories/deletion_request_repository.dart';
 import '../../../tasks/data/services/accountability_service.dart';
 
@@ -207,6 +208,34 @@ class ProjectsController extends ChangeNotifier {
             taskDate = phaseEndDate; // Cap at phase end
           }
 
+          // Get AI proof suggestion for this task
+          String? suggestedProofType;
+          List<String> alternativeProofTypes = [];
+          String? proofMechanism;
+          
+          try {
+            final tempTask = ProjectTaskModel(
+              id: '',
+              milestoneId: '',
+              title: task.title,
+              description: task.description,
+              estimatedHours: task.estimatedHours,
+              dueDate: taskDate,
+              status: 'pending',
+            );
+            
+            final proofSuggestion = await AIProofSuggestionService()
+                .suggestProofForTask(tempTask, input.category);
+            
+            suggestedProofType = proofSuggestion.primaryProofType;
+            alternativeProofTypes = proofSuggestion.alternativeProofTypes;
+            proofMechanism = proofSuggestion.proofMechanism;
+          } catch (e) {
+            debugPrint('Error getting AI proof suggestion for task "${task.title}": $e');
+            // Continue with default (timedSession)
+            suggestedProofType = 'timedSession';
+          }
+
           tasks.add(ProjectTaskModel(
             id: '',
             milestoneId: '',
@@ -215,6 +244,10 @@ class ProjectsController extends ChangeNotifier {
             estimatedHours: task.estimatedHours,
             dueDate: taskDate,
             status: 'pending',
+            suggestedProofType: suggestedProofType,
+            alternativeProofTypes: alternativeProofTypes,
+            proofMechanism: proofMechanism,
+            requiresProof: true,
           ));
 
           dailyHoursUsed += task.estimatedHours;

@@ -185,6 +185,12 @@ class ProjectTaskModel {
   final DateTime? dueDate;
   final String status; // pending, in_progress, done
   final DateTime? completedAt;
+  final String? suggestedProofType; // AI-suggested primary proof type
+  final List<String> alternativeProofTypes; // AI-suggested alternatives
+  final String? proofMechanism; // Mechanism type (study_session, work_session, practice, etc.)
+  final Map<String, String> proofs; // Proof submissions per date (YYYY-MM-DD format)
+  final bool requiresProof; // Whether proof is required for this task
+  final bool requiresPeerApproval; // Whether peer approval is needed (for high-stakes tasks)
 
   ProjectTaskModel({
     required this.id,
@@ -195,7 +201,13 @@ class ProjectTaskModel {
     this.dueDate,
     this.status = 'pending',
     this.completedAt,
-  });
+    this.suggestedProofType,
+    this.alternativeProofTypes = const [],
+    this.proofMechanism,
+    Map<String, String>? proofs,
+    this.requiresProof = true,
+    this.requiresPeerApproval = false,
+  }) : proofs = proofs ?? {};
 
   Map<String, dynamic> toMap() {
     return {
@@ -206,6 +218,12 @@ class ProjectTaskModel {
       if (dueDate != null) 'dueDate': Timestamp.fromDate(dueDate!),
       'status': status,
       if (completedAt != null) 'completedAt': Timestamp.fromDate(completedAt!),
+      if (suggestedProofType != null) 'suggestedProofType': suggestedProofType,
+      'alternativeProofTypes': alternativeProofTypes,
+      if (proofMechanism != null) 'proofMechanism': proofMechanism,
+      'proofs': proofs,
+      'requiresProof': requiresProof,
+      'requiresPeerApproval': requiresPeerApproval,
     };
   }
 
@@ -219,6 +237,16 @@ class ProjectTaskModel {
       dueDate: (map['dueDate'] as Timestamp?)?.toDate(),
       status: map['status'] ?? 'pending',
       completedAt: (map['completedAt'] as Timestamp?)?.toDate(),
+      suggestedProofType: map['suggestedProofType'] as String?,
+      alternativeProofTypes: map['alternativeProofTypes'] != null
+          ? List<String>.from(map['alternativeProofTypes'])
+          : [],
+      proofMechanism: map['proofMechanism'] as String?,
+      proofs: map['proofs'] != null
+          ? Map<String, String>.from(map['proofs'])
+          : {},
+      requiresProof: map['requiresProof'] ?? true,
+      requiresPeerApproval: map['requiresPeerApproval'] ?? false,
     );
   }
 
@@ -231,6 +259,12 @@ class ProjectTaskModel {
     DateTime? dueDate,
     String? status,
     DateTime? completedAt,
+    String? suggestedProofType,
+    List<String>? alternativeProofTypes,
+    String? proofMechanism,
+    Map<String, String>? proofs,
+    bool? requiresProof,
+    bool? requiresPeerApproval,
   }) {
     return ProjectTaskModel(
       id: id ?? this.id,
@@ -241,6 +275,12 @@ class ProjectTaskModel {
       dueDate: dueDate ?? this.dueDate,
       status: status ?? this.status,
       completedAt: completedAt ?? this.completedAt,
+      suggestedProofType: suggestedProofType ?? this.suggestedProofType,
+      alternativeProofTypes: alternativeProofTypes ?? this.alternativeProofTypes,
+      proofMechanism: proofMechanism ?? this.proofMechanism,
+      proofs: proofs ?? this.proofs,
+      requiresProof: requiresProof ?? this.requiresProof,
+      requiresPeerApproval: requiresPeerApproval ?? this.requiresPeerApproval,
     );
   }
 

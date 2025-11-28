@@ -167,7 +167,7 @@ class AppTheme {
 
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.surface,
-        selectedColor: AppColors.primary.withOpacity(0.2),
+        selectedColor: AppColors.primary.withValues(alpha: 0.2),
         labelStyle: AppTextStyles.labelMedium,
         padding: const EdgeInsets.symmetric(
           horizontal: AppDesignSystem.spacingMD,

@@ -1034,7 +1034,7 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.primary.withOpacity(0.4),
+                                color: AppColors.primary.withValues(alpha: 0.4),
                                 blurRadius: 12,
                                 offset: const Offset(0, 4),
                               ),
@@ -1105,8 +1105,8 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      AppColors.primary.withOpacity(0.2),
-                      AppColors.primary.withOpacity(0.1),
+                      AppColors.primary.withValues(alpha: 0.2),
+                      AppColors.primary.withValues(alpha: 0.1),
                     ],
                   )
                 : null,
@@ -1118,7 +1118,7 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: AppColors.primary.withOpacity(0.3),
+                      color: AppColors.primary.withValues(alpha: 0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -1153,7 +1153,34 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
     // Get background gradient and color using centralized utility
     final gradientColors = AttributeUtils.getAttributeGradient(attribute);
     final attributeColor = AttributeUtils.getAttributeColor(attribute);
-    final frequency = "Everyday"; // Frequency can be added to HabitModel in the future
+    
+    // Determine frequency/source text
+    String frequency;
+    final metadata = habit.metadata;
+    final taskType = metadata['type'] as String?;
+    
+    if (taskType == 'project') {
+      // Show project name for project tasks
+      frequency = metadata['projectTitle'] as String? ?? 'Project Task';
+    } else if (taskType == 'plan') {
+      // Show plan name for plan tasks
+      frequency = metadata['planTitle'] as String? ?? 'Plan Task';
+    } else if (taskType == 'workout') {
+      // Show workout plan name for workout tasks
+      frequency = metadata['planTitle'] as String? ?? 'Workout';
+    } else {
+      // Regular tasks show "Everyday" or actual schedule
+      if (habit.daysOfWeek.isEmpty && habit.specificDate != null) {
+        // Single date task - show date or "One-time"
+        frequency = "One-time";
+      } else if (habit.daysOfWeek.length == 7) {
+        frequency = "Everyday";
+      } else if (habit.daysOfWeek.isEmpty) {
+        frequency = "Scheduled";
+      } else {
+        frequency = "Everyday"; // Default fallback
+      }
+    }
 
     return GestureDetector(
       onTap: () => _handleHabitTap(context, habit, controller),
@@ -1167,12 +1194,12 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
             colors: [
               gradientColors[0],
               gradientColors[1],
-              gradientColors[0].withOpacity(0.8),
+              gradientColors[0].withValues(alpha: 0.8),
             ],
           ),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: attributeColor.withOpacity(0.3),
+            color: attributeColor.withValues(alpha: 0.3),
             width: 1.5,
           ),
           boxShadow: AppDesignSystem.getColoredShadow(attributeColor),

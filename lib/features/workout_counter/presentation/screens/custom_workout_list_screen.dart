@@ -240,11 +240,13 @@ class _CustomWorkoutListScreenState extends State<CustomWorkoutListScreen> {
                                         ],
                                       ),
                                       onTap: () {
+                                        final navigatorContext = context;
                                         Future.delayed(
                                           const Duration(milliseconds: 100),
                                           () {
+                                            if (!navigatorContext.mounted) return;
                                             Navigator.push(
-                                              context,
+                                              navigatorContext,
                                               MaterialPageRoute(
                                                 builder: (context) => CreateCustomWorkoutScreen(plan: plan),
                                               ),
@@ -262,10 +264,12 @@ class _CustomWorkoutListScreenState extends State<CustomWorkoutListScreen> {
                                         ],
                                       ),
                                       onTap: () {
+                                        final navigatorContext = context;
                                         Future.delayed(
                                           const Duration(milliseconds: 100),
                                           () {
-                                            _showDeleteDialog(context, controller, plan);
+                                            if (!navigatorContext.mounted) return;
+                                            _showDeleteDialog(navigatorContext, controller, plan);
                                           },
                                         );
                                       },

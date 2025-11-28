@@ -167,6 +167,7 @@ class PlanTasksSyncService {
 
       final projectData = projectDoc.data()!;
       final projectTitle = projectData['title'] as String? ?? 'Project';
+      final projectCategory = projectData['category'] as String? ?? 'general';
 
       // Get milestones
       final milestonesSnapshot = await _firestore
@@ -186,6 +187,7 @@ class PlanTasksSyncService {
         final milestoneTitle = milestoneData['title'] as String? ?? 'Milestone';
 
         // Get tasks for this milestone
+        // Note: We can't use isNotEqualTo with orderBy without an index, so we filter in memory
         final tasksSnapshot = await _firestore
             .collection('users')
             .doc(user.uid)
@@ -194,16 +196,28 @@ class PlanTasksSyncService {
             .collection('milestones')
             .doc(milestoneDoc.id)
             .collection('tasks')
-            .where('status', isNotEqualTo: 'done')
             .orderBy('dueDate')
             .get();
+        
+        // Filter out completed tasks in memory
+        final incompleteTasks = tasksSnapshot.docs.where((doc) {
+          final status = doc.data()['status'] as String?;
+          return status != 'done';
+        }).toList();
 
-        for (var taskDoc in tasksSnapshot.docs) {
+        for (var taskDoc in incompleteTasks) {
           final taskData = taskDoc.data();
           final taskTitle = taskData['title'] as String? ?? 'Task';
           final taskDescription = taskData['description'] as String? ?? '';
           final dueDate = (taskData['dueDate'] as Timestamp).toDate();
           final estimatedHours = taskData['estimatedHours'] as double? ?? 0.0;
+          
+          // Get project proof type information
+          final suggestedProofType = taskData['suggestedProofType'] as String?;
+          final alternativeProofTypes = taskData['alternativeProofTypes'] as List<dynamic>?;
+          final proofMechanism = taskData['proofMechanism'] as String?;
+          final requiresProof = taskData['requiresProof'] as bool? ?? true;
+          final requiresPeerApproval = taskData['requiresPeerApproval'] as bool? ?? false;
 
           final metadataPayload = {
             'type': 'project',
@@ -215,6 +229,13 @@ class PlanTasksSyncService {
             'dueDate': dueDate.toIso8601String(),
             'dateKey': HabitModel.getDateString(dueDate),
             'estimatedHours': estimatedHours,
+            'projectCategory': projectCategory,
+            // Store project proof type information
+            if (suggestedProofType != null) 'suggestedProofType': suggestedProofType,
+            if (alternativeProofTypes != null) 'alternativeProofTypes': alternativeProofTypes.map((e) => e.toString()).toList(),
+            if (proofMechanism != null) 'proofMechanism': proofMechanism,
+            'requiresProof': requiresProof,
+            'requiresPeerApproval': requiresPeerApproval,
           };
 
           final existingHabit = _findExistingProjectHabit(
@@ -233,6 +254,7 @@ class PlanTasksSyncService {
               scheduledTime: _getTimeFromDate(dueDate),
               specificDate: dueDate, // Update specificDate
               daysOfWeek: [], // Empty since using specificDate
+              requiresProof: requiresProof,
               metadata: metadataPayload,
             );
             await _tasksRepository.updateHabit(updatedHabit);
@@ -254,7 +276,7 @@ class PlanTasksSyncService {
             title: taskTitle,
             description: fullDescription,
             scheduledTime: _getTimeFromDate(dueDate),
-            requiresProof: estimatedHours >= 2.0, // Tasks 2+ hours require proof
+            requiresProof: requiresProof, // Use project task's requiresProof setting
             isPreset: false,
             isSystemAssigned: true,
             difficulty: estimatedHours >= 3.0

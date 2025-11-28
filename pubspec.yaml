@@ -61,10 +61,6 @@ flutter:
     - assets/icons/google.png
     - assets/icons/apple.png
     - assets/icons/email.png
-
-    # 🔹 (Optional) folders for onboarding images / localization JSONs
-    - assets/onboarding/
-    - assets/lang/
     
     # 🔹 Environment configuration (loaded from assets/.env)
     - assets/.env

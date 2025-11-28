@@ -24,7 +24,7 @@ class ScreenContentWrapper extends StatelessWidget {
           colors: backgroundColor != null
               ? [
                   backgroundColor!,
-                  backgroundColor!.withOpacity(0.95),
+                  backgroundColor!.withValues(alpha: 0.95),
                 ]
               : [
                   AppDesignSystem.backgroundMain,

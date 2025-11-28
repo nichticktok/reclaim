@@ -121,7 +121,7 @@ Throughout the book, Kahneman demonstrates that while System 1 is efficient, it'
         summary: '''
 Sapiens by Yuval Noah Harari provides a sweeping overview of the history of Homo sapiens from the Stone Age to the present. Harari argues that three major revolutions shaped human history: the Cognitive Revolution (70,000 years ago), the Agricultural Revolution (12,000 years ago), and the Scientific Revolution (500 years ago).
 
-The book explores how Homo sapiens came to dominate the world through the ability to create and believe in shared fictions - concepts like money, nations, and corporations that exist only in our collective imagination. Harari challenges conventional narratives about human progress, questioning whether the Agricultural Revolution actually improved human happiness and examining the costs of our species\' success.
+The book explores how Homo sapiens came to dominate the world through the ability to create and believe in shared fictions - concepts like money, nations, and corporations that exist only in our collective imagination. Harari challenges conventional narratives about human progress, questioning whether the Agricultural Revolution actually improved human happiness and examining the costs of our species' success.
 
 Harari also looks forward, considering how biotechnology, artificial intelligence, and other technologies might reshape humanity in the future. The book raises profound questions about happiness, meaning, and what makes humans unique.
 ''',
